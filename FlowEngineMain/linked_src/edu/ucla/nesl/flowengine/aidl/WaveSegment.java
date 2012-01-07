@@ -2,7 +2,6 @@ package edu.ucla.nesl.flowengine.aidl;
 
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.util.Log;
 
 public class WaveSegment implements Parcelable {
 

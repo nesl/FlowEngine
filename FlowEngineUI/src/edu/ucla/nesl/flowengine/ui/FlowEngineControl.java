@@ -20,6 +20,7 @@ public class FlowEngineControl extends Activity {
 	
 	private static final String FlowEngineMainServiceName = "edu.ucla.nesl.flowengine.FlowEngine";
 	private static final String AbstractDeviceAccelerometerServiceName = "edu.ucla.nesl.flowengine.abstractdevice.accelerometer.AccelerometerService";
+	private static final String FlowMBedEngineServiceName = "edu.ucla.nesl.flowengine.mbed.FlowMBedEngine";
 	
 	private static final int MSG_UPDATE_UI = 0xAB;
 	
@@ -45,7 +46,7 @@ public class FlowEngineControl extends Activity {
 	
 	private ToggleButton flowEngineButton;
 	private ToggleButton accelerometerButton;
-	private ToggleButton proximityButton;
+	private ToggleButton flowmbedButton;
 	private ToggleButton locationButton;
 	
 	private boolean isFlowEngineServiceRunning() {
@@ -68,6 +69,16 @@ public class FlowEngineControl extends Activity {
 		return false;
 	}
 
+	private boolean isFlowMBedEngineServiceRunning() {
+		ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+		for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+			if (FlowMBedEngineServiceName.equals(service.service.getClassName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -75,7 +86,7 @@ public class FlowEngineControl extends Activity {
 		
 		flowEngineButton = (ToggleButton) findViewById(R.id.toggle_flowengine);
 		accelerometerButton = (ToggleButton) findViewById(R.id.toggle_accelerometer);
-		proximityButton = (ToggleButton) findViewById(R.id.toggle_proximity);
+		flowmbedButton = (ToggleButton) findViewById(R.id.toggle_flowmbed);
 		locationButton = (ToggleButton) findViewById(R.id.toggle_location);
 		
 		flowEngineButton.setOnClickListener(new OnClickListener() {
@@ -102,13 +113,13 @@ public class FlowEngineControl extends Activity {
 			}
 		});
 
-		proximityButton.setOnClickListener(new OnClickListener() {
+		flowmbedButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View arg0) {
-				if (proximityButton.isChecked()) {
-					
+				if (flowmbedButton.isChecked()) {
+					startService(new Intent(FlowMBedEngineServiceName));
 				} else {
-					
+					stopService(new Intent(FlowMBedEngineServiceName));
 				}
 				updateUIServiceRunningStatus();
 			}
@@ -127,7 +138,7 @@ public class FlowEngineControl extends Activity {
 		});
 
 		// Start FlowEngine in case it hasn't been start at boot-up time.
-		//startService(new Intent(FlowEngine.class.getName()));
+		startService(new Intent(FlowEngineMainServiceName));
 	
 		// Timer task for checking service status and updating UI.
 		timer = new Timer("UpdateUI");
@@ -149,7 +160,13 @@ public class FlowEngineControl extends Activity {
 		} else {
 			accelerometerButton.setChecked(false);
 		}
-	}
+
+		if (isFlowMBedEngineServiceRunning()) {
+			flowmbedButton.setChecked(true);
+		} else {
+			flowmbedButton.setChecked(false);
+		}
+}
 	
 	@Override
 	protected void onResume() {
