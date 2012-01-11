@@ -43,7 +43,7 @@ public class WaveSegment implements Parcelable {
 		source.readDoubleArray(data);
 	}
 	
-	public WaveSegment(String name, long timestamp, long interval, double latitude, double longitude, String[] format, float[] data) {
+	public WaveSegment(String name, long timestamp, long interval, double latitude, double longitude, String[] format, double[] data, int length) {
 		this.name = name;
 		this.timestamp = timestamp;
 		this.interval = interval;
@@ -56,13 +56,17 @@ public class WaveSegment implements Parcelable {
 		for (int i = 0; i < this.numChannel; i++) {
 			this.format[i] = format[i];
 		}
-		this.numData = data.length;
+		this.numData = length;
 		if (this.numData > MAX_NUM_DATA) {
 			this.numData = MAX_NUM_DATA;
 		}
 		for (int i = 0; i < this.numData; i++) {
 			this.data[i] = data[i];
 		}
+	}
+
+	public WaveSegment(String name, long timestamp, long interval, double latitude, double longitude, String[] format, double[] data) {
+		this(name, timestamp, interval, latitude, longitude, format, data, data.length);
 	}
 
 	@Override

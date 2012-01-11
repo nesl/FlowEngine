@@ -20,7 +20,7 @@ public class FlowEngineControl extends Activity {
 	
 	private static final String FlowEngineMainServiceName = "edu.ucla.nesl.flowengine.FlowEngine";
 	private static final String AbstractDeviceAccelerometerServiceName = "edu.ucla.nesl.flowengine.abstractdevice.accelerometer.AccelerometerService";
-	private static final String FlowMBedEngineServiceName = "edu.ucla.nesl.flowengine.mbed.FlowMBedEngine";
+	private static final String MBedFlowEngineServiceName = "edu.ucla.nesl.flowengine.mbed.MBedFlowEngine";
 	
 	private static final int MSG_UPDATE_UI = 0xAB;
 	
@@ -46,7 +46,7 @@ public class FlowEngineControl extends Activity {
 	
 	private ToggleButton flowEngineButton;
 	private ToggleButton accelerometerButton;
-	private ToggleButton flowmbedButton;
+	private ToggleButton mbedButton;
 	private ToggleButton locationButton;
 	
 	private boolean isFlowEngineServiceRunning() {
@@ -72,7 +72,7 @@ public class FlowEngineControl extends Activity {
 	private boolean isFlowMBedEngineServiceRunning() {
 		ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
 		for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-			if (FlowMBedEngineServiceName.equals(service.service.getClassName())) {
+			if (MBedFlowEngineServiceName.equals(service.service.getClassName())) {
 				return true;
 			}
 		}
@@ -86,7 +86,7 @@ public class FlowEngineControl extends Activity {
 		
 		flowEngineButton = (ToggleButton) findViewById(R.id.toggle_flowengine);
 		accelerometerButton = (ToggleButton) findViewById(R.id.toggle_accelerometer);
-		flowmbedButton = (ToggleButton) findViewById(R.id.toggle_flowmbed);
+		mbedButton = (ToggleButton) findViewById(R.id.toggle_flowmbed);
 		locationButton = (ToggleButton) findViewById(R.id.toggle_location);
 		
 		flowEngineButton.setOnClickListener(new OnClickListener() {
@@ -113,13 +113,13 @@ public class FlowEngineControl extends Activity {
 			}
 		});
 
-		flowmbedButton.setOnClickListener(new OnClickListener() {
+		mbedButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View arg0) {
-				if (flowmbedButton.isChecked()) {
-					startService(new Intent(FlowMBedEngineServiceName));
+				if (mbedButton.isChecked()) {
+					startService(new Intent(MBedFlowEngineServiceName));
 				} else {
-					stopService(new Intent(FlowMBedEngineServiceName));
+					stopService(new Intent(MBedFlowEngineServiceName));
 				}
 				updateUIServiceRunningStatus();
 			}
@@ -162,9 +162,9 @@ public class FlowEngineControl extends Activity {
 		}
 
 		if (isFlowMBedEngineServiceRunning()) {
-			flowmbedButton.setChecked(true);
+			mbedButton.setChecked(true);
 		} else {
-			flowmbedButton.setChecked(false);
+			mbedButton.setChecked(false);
 		}
 }
 	

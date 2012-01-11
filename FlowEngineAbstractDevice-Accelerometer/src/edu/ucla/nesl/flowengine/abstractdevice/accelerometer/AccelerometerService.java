@@ -22,7 +22,7 @@ public class AccelerometerService extends Service implements SensorEventListener
 	private static final String TAG = AccelerometerService.class.getSimpleName();
 	private static final String FlowEngineServiceName = "edu.ucla.nesl.flowengine.FlowEngine";
 
-	private static final String[] mFormat = { "AccelerometerX", "AccelerometerY", "AccelerometerZ" };
+	private static final String[] mFormat = { "X", "Y", "Z" };
 	
 	private FlowEngineDeviceAPI 	mAPI;
 	private Handler 				mHandler;

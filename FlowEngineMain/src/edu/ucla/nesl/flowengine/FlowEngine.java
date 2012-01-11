@@ -14,6 +14,7 @@ import android.util.Log;
 import edu.ucla.nesl.flowengine.aidl.AbstractDeviceInterface;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineDeviceAPI;
 import edu.ucla.nesl.flowengine.aidl.WaveSegment;
+import edu.ucla.nesl.util.NotificationHelper;
 
 public class FlowEngine extends Service {
 
@@ -21,7 +22,9 @@ public class FlowEngine extends Service {
 
 	private Handler 						mHandler;
 	private FlowEngine 						mThisService = this;
-	
+
+	private NotificationHelper notify;
+
 	private List<AbstractDeviceInterface> 	adis = new ArrayList<AbstractDeviceInterface>();
 	private FlowEngineDeviceAPI.Stub 		deviceApiEndpoint = new FlowEngineDeviceAPI.Stub() {
 		
@@ -63,7 +66,7 @@ public class FlowEngine extends Service {
 		}
 	};
 
-	private void dumpWaveSegment(final WaveSegment ws) {
+	private String dumpWaveSegment(final WaveSegment ws) {
 		String wsDump = "timestamp:" + Long.toString(ws.timestamp) 
 				+ ", interval:" + Long.toString(ws.interval) 
 				+ ", location:";
@@ -88,15 +91,15 @@ public class FlowEngine extends Service {
 			}
 			wsDump += "}";
 		}
-		Log.i(TAG, wsDump);
+		return wsDump;
 	}
 	
 	private void handlePushWaveSegment(final WaveSegment ws) {
 		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
-				Log.i(TAG, "pushWaveSegment(): " + ws.name);
-				dumpWaveSegment(ws);
+				notify.showNotificationNow("pushWaveSegment(): " + ws.name);
+				notify.showNotificationNow(dumpWaveSegment(ws));
 			}
 		});
 	}
