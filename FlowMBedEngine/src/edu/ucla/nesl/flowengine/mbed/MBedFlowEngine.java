@@ -4,6 +4,8 @@ import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.app.PendingIntent;
 import android.app.Service;
@@ -55,7 +57,7 @@ public class MBedFlowEngine extends Service implements Runnable {
 	private FlowEngineDeviceAPI 	mAPI;
 	private MBedFlowEngine 			mThisService = this;
 	
-	/*private Timer mTimer;
+	private Timer mTimer;
 	private TimerTask mTimerTask;
 			
 	private class TestTimerTask extends TimerTask {
@@ -64,7 +66,7 @@ public class MBedFlowEngine extends Service implements Runnable {
 			Message m = Message.obtain(mHandler, MSG_TYPE_TIMER_TASK);
 			mHandler.sendMessage(m);
 		}
-	};*/
+	};
 
 	private double[] parseMBedMessage(byte[] msg) {
 		double[] values = { 0.5, 0.5, 0.5 };
@@ -80,10 +82,15 @@ public class MBedFlowEngine extends Service implements Runnable {
 				Bundle bundle = msg.getData();
 				byte[] data = bundle.getByteArray("data");
 				int length = bundle.getInt("length");
-				notify.showNotificationNow("read(" + Integer.toString(length) + "): " + new String(data));
+				//notify.showNotificationNow("read(" + Integer.toString(length) + "): " + new String(data));
 				
 				try {
-					mAPI.pushWaveSegment(new WaveSegment("mBedAccelerometer", System.currentTimeMillis(), 0, 0.0, 0.0, mFormat, parseMBedMessage(data)));
+					if (mAPI != null) {
+						WaveSegment ws = new WaveSegment("mBedAccelerometer", System.currentTimeMillis(), 0, 0.0, 0.0, mFormat, parseMBedMessage(data));
+						mAPI.pushWaveSegment(ws);
+					} else {
+						notify.showNotificationNow("mAPI is null..");
+					}
 				} catch (RemoteException e1) {
 					notify.showNotificationNow("RemoteException while pushWaveSegment()..");
 					e1.printStackTrace();
@@ -96,12 +103,12 @@ public class MBedFlowEngine extends Service implements Runnable {
 						mOutputStream.write("Hello mbed!\n".getBytes());
 					} else {
 						notify.showNotificationNow("mOutputStream is null..");
-						//mTimer.cancel();
+						mTimer.cancel();
 					}
 				} catch (IOException e) {
 					notify.showNotificationNow("IOException while mOutputStream.write()..");
 					e.printStackTrace();
-					//mTimer.cancel();
+					mTimer.cancel();
 				}
 				break;
 			}
@@ -211,9 +218,9 @@ public class MBedFlowEngine extends Service implements Runnable {
 			Thread thread = new Thread(this, "MBedFlowEngine");
 			thread.start();
 
-			/*mTimer = new Timer("TestTask");
+			mTimer = new Timer("TestTask");
 			mTimerTask = new TestTimerTask();
-			mTimer.schedule(mTimerTask, mDelay, mPeriod);*/
+			mTimer.schedule(mTimerTask, mDelay, mPeriod);
 		} else {
 			notify.showNotificationNow("mFileDescriptor is null..");
 		}
@@ -231,7 +238,7 @@ public class MBedFlowEngine extends Service implements Runnable {
 			mInputStream = null;
 			mOutputStream = null;
 			
-			//mTimer.cancel();
+			mTimer.cancel();
 		}
 	}
 
@@ -248,6 +255,7 @@ public class MBedFlowEngine extends Service implements Runnable {
 				e.printStackTrace();
 				break;
 			}
+			
 			Message m = Message.obtain(mHandler, MSG_TYPE_MBED_DATA);
 			Bundle bundle = new Bundle();
 			bundle.putByteArray("data", buffer);

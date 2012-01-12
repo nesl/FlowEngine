@@ -42,7 +42,9 @@ public class FlowEngine extends Service {
 		@Override
 		public void pushWaveSegment(WaveSegment ws)
 				throws RemoteException {
-			handlePushWaveSegment(ws);
+			//handlePushWaveSegment(ws);
+			notify.showNotificationNow("pushWaveSegment(): " + ws.name);
+			notify.showNotificationNow(dumpWaveSegment(ws));
 		}
 
 		@Override
@@ -94,7 +96,7 @@ public class FlowEngine extends Service {
 		return wsDump;
 	}
 	
-	private void handlePushWaveSegment(final WaveSegment ws) {
+	/*private void handlePushWaveSegment() {
 		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
@@ -102,7 +104,7 @@ public class FlowEngine extends Service {
 				notify.showNotificationNow(dumpWaveSegment(ws));
 			}
 		});
-	}
+	}*/
 	
 	@Override
 	public IBinder onBind(Intent intent) {
@@ -121,6 +123,7 @@ public class FlowEngine extends Service {
 		super.onCreate();
 		
 		mHandler = new Handler();
+		notify = new NotificationHelper(this, this.getClass().getSimpleName(), this.getClass().getName(), R.drawable.ic_launcher);
 		
 		Log.i(TAG, "Service creating");
 	}

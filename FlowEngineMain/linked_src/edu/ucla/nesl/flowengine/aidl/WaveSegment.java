@@ -2,6 +2,7 @@ package edu.ucla.nesl.flowengine.aidl;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
 
 public class WaveSegment implements Parcelable {
 
@@ -86,63 +87,4 @@ public class WaveSegment implements Parcelable {
 		dest.writeInt(numData);
 		dest.writeDoubleArray(data);
 	}
-	
-	// no getter and setter for performance.
-	/*public String getName() {
-		return mName;
-	}
-	
-	public long getTimestamp() {
-		return mTimestamp;
-	}
-	
-	public long getInterval() {
-		return mInterval;
-	}
-	
-	public double[] getLocation() {
-		return mLocation;
-	}
-	
-	public String[] getFormat() {
-		return mFormat;
-	}
-	
-	public double[] getData() {
-		return mData;
-	}
-	
-	public void setName(String name) {
-		mName = name;
-	}
-	
-	public void setTimestamp(long timestamp) {
-		mTimestamp = timestamp;
-	}
-	
-	public void setInterval(long interval) {
-		mInterval = interval;
-	}
-	
-	public void setLocation(double[] location) {
-		mLocation = location;
-	}
-	
-	public void setFormat(String[] format) {
-		mFormat = format;
-	}
-
-	public void setData(double[] data, int startIndex, int numValues) {
-		mData = new double[numValues];
-		for (int i = 0; i < numValues; i++) {
-			mData[i] = data[startIndex + i];
-		}
-	}
-
-	public void setData(float[] data, int startIndex, int numValues) {
-		mData = new double[numValues];
-		for (int i = 0; i < numValues; i++) {
-			mData[i] = data[startIndex + i];
-		}
-	}*/
 }
