@@ -1,33 +1,47 @@
 package edu.ucla.nesl.flowengine;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import android.app.Service;
 import android.content.Intent;
 import android.os.Debug;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.os.Parcel;
 import android.os.RemoteException;
 import android.util.Log;
 import edu.ucla.nesl.flowengine.aidl.AbstractDeviceInterface;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineDeviceAPI;
-import edu.ucla.nesl.flowengine.aidl.WaveSegment;
+import edu.ucla.nesl.flowengine.node.BufferNode;
+import edu.ucla.nesl.flowengine.node.classifier.ActivityClassifier;
+import edu.ucla.nesl.flowengine.node.feature.AverageVariance;
+import edu.ucla.nesl.flowengine.node.feature.Goertzel;
+import edu.ucla.nesl.flowengine.node.feature.RootMeanSquare;
 import edu.ucla.nesl.util.NotificationHelper;
 
 public class FlowEngine extends Service {
 
 	private static final String TAG = FlowEngine.class.getSimpleName();
 
-	private Handler 						mHandler;
-	private FlowEngine 						mThisService = this;
-
+	int mNextDeviceID = 1;
+	
 	private NotificationHelper notify;
 
-	private List<AbstractDeviceInterface> 	adis = new ArrayList<AbstractDeviceInterface>();
-	private FlowEngineDeviceAPI.Stub 		deviceApiEndpoint = new FlowEngineDeviceAPI.Stub() {
-		
+	private Map<Integer, AbstractDevice> deviceMap = new HashMap<Integer, AbstractDevice>();
+
+	private Handler mHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			synchronized (deviceMap) {
+				AbstractDevice device = deviceMap.get(msg.what);
+				device.node.inputData("Accelerometer", msg.obj);	
+			}
+		}
+	};
+	
+	private FlowEngineDeviceAPI.Stub deviceApiEndpoint = new FlowEngineDeviceAPI.Stub() {
 		// This override is very useful for debugging.
 		@Override
 		public boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
@@ -40,35 +54,46 @@ public class FlowEngine extends Service {
 		}
 		
 		@Override
-		public void pushWaveSegment(WaveSegment ws)
-				throws RemoteException {
-			//handlePushWaveSegment(ws);
-			notify.showNotificationNow("pushWaveSegment(): " + ws.name);
-			notify.showNotificationNow(dumpWaveSegment(ws));
+		public int addAbstractDevice(AbstractDeviceInterface adi) throws RemoteException {
+			synchronized(deviceMap) {
+				AbstractDevice device = new AbstractDevice(adi);
+				int deviceID = mNextDeviceID;
+				mNextDeviceID += 1;
+				deviceMap.put(deviceID, device);
+				
+				// TODO: refine how to configure a graph.
+				RootMeanSquare rms = new RootMeanSquare();
+				BufferNode bufferNode = new BufferNode(50);
+				AverageVariance avgVar = new AverageVariance();
+				Goertzel goertzel = new Goertzel(1.0, 10.0, 1.0);
+				ActivityClassifier activity= new ActivityClassifier();
+				goertzel.addOutputNode(activity);
+				avgVar.addOutputNode(activity);
+				bufferNode.addOutputNode(goertzel);
+				bufferNode.addOutputNode(avgVar);
+				rms.addOutputNode(bufferNode);
+				device.node.addOutputNode(rms);
+				
+				Log.d(TAG, "Added device ID: " + Integer.toString(deviceID));
+				return deviceID;
+			}
 		}
 
 		@Override
-		public void addAbstractDevice(AbstractDeviceInterface adi)
-				throws RemoteException {
-			synchronized(adis) {
-				adis.add(adi);
+		public void removeAbstractDevice(int deviceID) throws RemoteException {
+			synchronized(deviceMap) {
+				deviceMap.remove(deviceID);
 			}
-			
-			adi.start();
 		}
 
 		@Override
-		public void removeAbstractDevice(AbstractDeviceInterface adi)
-				throws RemoteException {
-			synchronized(adis) {
-				adis.remove(adi);
-			}
-			
-			adi.stop();
+		public void pushData(int deviceID, double[] data) throws RemoteException {
+			mHandler.sendMessage(mHandler.obtainMessage(deviceID, data));
 		}
 	};
 
-	private String dumpWaveSegment(final WaveSegment ws) {
+	
+	/*private String dumpWaveSegment(final WaveSegment ws) {
 		String wsDump = "timestamp:" + Long.toString(ws.timestamp) 
 				+ ", interval:" + Long.toString(ws.interval) 
 				+ ", location:";
@@ -94,16 +119,6 @@ public class FlowEngine extends Service {
 			wsDump += "}";
 		}
 		return wsDump;
-	}
-	
-	/*private void handlePushWaveSegment() {
-		mHandler.post(new Runnable() {
-			@Override
-			public void run() {
-				notify.showNotificationNow("pushWaveSegment(): " + ws.name);
-				notify.showNotificationNow(dumpWaveSegment(ws));
-			}
-		});
 	}*/
 	
 	@Override
@@ -122,7 +137,6 @@ public class FlowEngine extends Service {
 		
 		super.onCreate();
 		
-		mHandler = new Handler();
 		notify = new NotificationHelper(this, this.getClass().getSimpleName(), this.getClass().getName(), R.drawable.ic_launcher);
 		
 		Log.i(TAG, "Service creating");
@@ -134,9 +148,9 @@ public class FlowEngine extends Service {
 		
 		Log.i(TAG, "Service destroying");
 		
-		for (AbstractDeviceInterface adi : adis) {
+		for (Map.Entry<Integer, AbstractDevice> entry : deviceMap.entrySet()) {
 			try {
-				adi.kill();
+				entry.getValue().adi.kill();
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}

@@ -39,7 +39,7 @@
 		<link>
 			<name>linked_src</name>
 			<type>2</type>
-			<location>/home/haksoo/workspace/FlowEngine/FlowEngineMain/linked_src</location>
+			<locationURI>$%7BPARENT-1-PROJECT_LOC%7D/FlowEngineMain/linked_src</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

@@ -66,7 +66,33 @@ public class WaveSegment implements Parcelable {
 		}
 	}
 
+	public WaveSegment(String name, long timestamp, long interval, double latitude, double longitude, String[] format, float[] data, int length) {
+		this.name = name;
+		this.timestamp = timestamp;
+		this.interval = interval;
+		this.latitude = latitude;
+		this.longitude = longitude;
+		this.numChannel = format.length;
+		if (this.numChannel > MAX_NUM_CHANNEL) {
+			this.numChannel = MAX_NUM_CHANNEL;
+		}
+		for (int i = 0; i < this.numChannel; i++) {
+			this.format[i] = format[i];
+		}
+		this.numData = length;
+		if (this.numData > MAX_NUM_DATA) {
+			this.numData = MAX_NUM_DATA;
+		}
+		for (int i = 0; i < this.numData; i++) {
+			this.data[i] = data[i];
+		}
+	}
+
 	public WaveSegment(String name, long timestamp, long interval, double latitude, double longitude, String[] format, double[] data) {
+		this(name, timestamp, interval, latitude, longitude, format, data, data.length);
+	}
+
+	public WaveSegment(String name, long timestamp, int interval, double latitude, double longitude, String[] format, float[] data) {
 		this(name, timestamp, interval, latitude, longitude, format, data, data.length);
 	}
 

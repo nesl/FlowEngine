@@ -31,13 +31,16 @@ public class AccelerometerService extends Service implements SensorEventListener
 	private SensorManager 			mSensorManager;
 	private Sensor 					mAccelerometer;
 	
+	private int						mDeviceID;
+	
 	private ServiceConnection 		mServiceConnection = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
 			Log.i(TAG, "Service connection established.");
 			mAPI = FlowEngineDeviceAPI.Stub.asInterface(service);
 			try {
-				mAPI.addAbstractDevice(mAccelerometerDeviceInterface);
+				mDeviceID = mAPI.addAbstractDevice(mAccelerometerDeviceInterface);
+				mThisService.mSensorManager.registerListener(mThisService, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
 			} catch (RemoteException e) {
 				Log.e(TAG, "Failed to add AbstractDevice..", e);
 			}
@@ -131,7 +134,7 @@ public class AccelerometerService extends Service implements SensorEventListener
 		mSensorManager.unregisterListener(this);
 		
 		try {
-			mAPI.removeAbstractDevice(mAccelerometerDeviceInterface);
+			mAPI.removeAbstractDevice(mDeviceID);
 			unbindService(mServiceConnection);
 		} catch (Throwable t) {
 			Log.w(TAG, "Failed to unbind from the service", t);
@@ -165,11 +168,16 @@ public class AccelerometerService extends Service implements SensorEventListener
 	    	ws.data[i] = event.values[i];
 	    }*/
 
-	    WaveSegment ws = new WaveSegment("Internalaccelerometer", event.timestamp, 0, 0.0, 0.0, mFormat, event.values);
+	    //WaveSegment ws = new WaveSegment("Internalaccelerometer", event.timestamp, 0, 0.0, 0.0, mFormat, event.values);
+	    double[] data = new double[3];
+	    data[0] = event.values[0];
+	    data[1] = event.values[1];
+	    data[2] = event.values[2];
 	    
 		// Push this WaveSegment.
 		try {
-			mAPI.pushWaveSegment(ws);
+			//mAPI.pushWaveSegment(ws);
+			mAPI.pushData(mDeviceID, data);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		} catch (Exception e) {
