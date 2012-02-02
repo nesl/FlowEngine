@@ -8,21 +8,18 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
+import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.aidl.AbstractDeviceInterface;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineDeviceAPI;
-import edu.ucla.nesl.flowengine.aidl.WaveSegment;
 
 public class AccelerometerService extends Service implements SensorEventListener {
 
 	private static final String TAG = AccelerometerService.class.getSimpleName();
 	private static final String FlowEngineServiceName = "edu.ucla.nesl.flowengine.FlowEngine";
-
-	private static final String[] mFormat = { "X", "Y", "Z" };
 	
 	private FlowEngineDeviceAPI 	mAPI;
 	private Handler 				mHandler;
@@ -105,8 +102,8 @@ public class AccelerometerService extends Service implements SensorEventListener
 
 	@Override
 	public void onCreate() {
-		Debug.startMethodTracing("AccelerometerService");
-		Debug.startAllocCounting();
+		//Debug.startMethodTracing("AccelerometerService");
+		//Debug.startAllocCounting();
 		
 		super.onCreate();
 		Log.i(TAG, "Service creating");
@@ -126,8 +123,8 @@ public class AccelerometerService extends Service implements SensorEventListener
 	
 	@Override
 	public void onDestroy() {
-		Debug.stopAllocCounting();
-		Debug.stopMethodTracing();
+		//Debug.stopAllocCounting();
+		//Debug.stopMethodTracing();
 		
 		Log.i(TAG, "Service destroying");
 		
@@ -177,7 +174,7 @@ public class AccelerometerService extends Service implements SensorEventListener
 		// Push this WaveSegment.
 		try {
 			//mAPI.pushWaveSegment(ws);
-			mAPI.pushData(mDeviceID, data);
+			mAPI.pushDoubleArrayData(SensorType.ACCELEROMETER, data);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		} catch (Exception e) {

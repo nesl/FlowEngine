@@ -5,10 +5,8 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class AbstractDevice {
 	AbstractDeviceInterface adi;
-	DataFlowNode node;
 	
 	AbstractDevice(AbstractDeviceInterface adi) {
 		this.adi = adi;
-		node = new DataFlowNode();
 	}
 }

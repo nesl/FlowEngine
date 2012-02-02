@@ -5,8 +5,9 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class AverageVariance extends DataFlowNode {
 	private static final String TAG = AverageVariance.class.getSimpleName();
-	
-	public void inputData(String type, Object inputData) {
+
+	@Override
+	public void inputData(String name, String type, Object inputData, int length) {
 		double sum = 0.0, avg, var;
 		double[] data = (double[])inputData;
 		
@@ -29,6 +30,6 @@ public class AverageVariance extends DataFlowNode {
 		avgVar[0] = avg;
 		avgVar[1] = var;
 		
-		outputData("AverageVariance", avgVar);
+		outputData("AverageVariance", "double[]", avgVar, avgVar.length);
 	}
 }

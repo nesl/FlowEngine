@@ -35,7 +35,7 @@ public class Goertzel extends DataFlowNode {
 	}
 	
 	@Override
-	public void inputData(String type, Object inputData) {
+	public void inputData(String name, String type, Object inputData, int length) {
 		double[] data = (double[])inputData;
 		int i = 0;
 		for (double frequency = mStartFrequency; frequency <= mEndFrequency; frequency += mStepFrequency) {
@@ -49,6 +49,6 @@ public class Goertzel extends DataFlowNode {
 		}
 		Log.d(TAG, debug);
 		
-		outputData("Goertzel", mPowerSpectrum);
+		outputData("Goertzel", "double[]", mPowerSpectrum, mPowerSpectrum.length);
 	}
 }

@@ -5,9 +5,12 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class RootMeanSquare extends DataFlowNode {
 	private static final String TAG = RootMeanSquare.class.getSimpleName();
-
+	
+	public String mName = "RootMeanSquare";
+	public String mType = "double";
+	
 	@Override
-	public void inputData(String type, Object inputData) {
+	public void inputData(String name, String type, Object inputData, int length) {
 		double[] data = (double[])inputData;
 		double totalForce = 0.0;
 
@@ -17,6 +20,6 @@ public class RootMeanSquare extends DataFlowNode {
 			totalForce += Math.pow(value, 2.0);
 		}
 		totalForce = Math.sqrt(totalForce);
-		outputData("RootMeanSquare", totalForce);
+		outputData("RootMeanSquare", "double", totalForce, 0);
 	}
 }

@@ -1,7 +1,6 @@
 package edu.ucla.nesl.flowengine.node.classifier;
 
 import android.util.Log;
-import edu.ucla.nesl.flowengine.aidl.WaveSegment;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class ActivityClassifier extends DataFlowNode {
@@ -11,10 +10,10 @@ public class ActivityClassifier extends DataFlowNode {
 	private double[] mAvgVar = null;
 
 	@Override
-	public void inputData(String type, Object inputData) {
-		if (type.equals("Goertzel")) {
+	public void inputData(String name, String type, Object inputData, int length) {
+		if (name.equals("Goertzel")) {
 			mPower = (double[])inputData;
-		} else if (type.equals("AverageVariance")) {
+		} else if (name.equals("AverageVariance")) {
 			mAvgVar = (double[])inputData;
 		}
 

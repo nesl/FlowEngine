@@ -21,6 +21,7 @@ public class FlowEngineControl extends Activity {
 	private static final String FlowEngineMainServiceName = "edu.ucla.nesl.flowengine.FlowEngine";
 	private static final String AbstractDeviceAccelerometerServiceName = "edu.ucla.nesl.flowengine.abstractdevice.accelerometer.AccelerometerService";
 	private static final String MBedFlowEngineServiceName = "edu.ucla.nesl.flowengine.mbed.MBedFlowEngine";
+	private static final String ZephyrServiceName = "edu.ucla.nesl.flowengine.abstractdevice.zephyr.ZephyrService";
 	
 	private static final int MSG_UPDATE_UI = 0xAB;
 	
@@ -47,7 +48,7 @@ public class FlowEngineControl extends Activity {
 	private ToggleButton flowEngineButton;
 	private ToggleButton accelerometerButton;
 	private ToggleButton mbedButton;
-	private ToggleButton locationButton;
+	private ToggleButton zephyrButton;
 	
 	private boolean isFlowEngineServiceRunning() {
 		ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
@@ -79,6 +80,16 @@ public class FlowEngineControl extends Activity {
 		return false;
 	}
 
+	private boolean isZephyrServiceRunning() {
+		ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+		for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+			if (ZephyrServiceName.equals(service.service.getClassName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -87,7 +98,7 @@ public class FlowEngineControl extends Activity {
 		flowEngineButton = (ToggleButton) findViewById(R.id.toggle_flowengine);
 		accelerometerButton = (ToggleButton) findViewById(R.id.toggle_accelerometer);
 		mbedButton = (ToggleButton) findViewById(R.id.toggle_flowmbed);
-		locationButton = (ToggleButton) findViewById(R.id.toggle_location);
+		zephyrButton = (ToggleButton) findViewById(R.id.toggle_zephyr);
 		
 		flowEngineButton.setOnClickListener(new OnClickListener() {
 			@Override
@@ -125,13 +136,13 @@ public class FlowEngineControl extends Activity {
 			}
 		});
 
-		locationButton.setOnClickListener(new OnClickListener() {
+		zephyrButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View arg0) {
-				if (locationButton.isChecked()) {
-					
+				if (zephyrButton.isChecked()) {
+					startService(new Intent(ZephyrServiceName));
 				} else {
-					
+					stopService(new Intent(ZephyrServiceName));
 				}
 				updateUIServiceRunningStatus();
 			}
@@ -165,6 +176,12 @@ public class FlowEngineControl extends Activity {
 			mbedButton.setChecked(true);
 		} else {
 			mbedButton.setChecked(false);
+		}
+		
+		if (isZephyrServiceRunning()) {
+			zephyrButton.setChecked(true);
+		} else {
+			zephyrButton.setChecked(false);
 		}
 }
 	

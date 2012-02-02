@@ -2,13 +2,15 @@ package edu.ucla.nesl.flowengine.node;
 
 import java.util.ArrayList;
 
-public class DataFlowNode {
+import android.util.Log;
+
+public abstract class DataFlowNode {
+	private static final String TAG = DataFlowNode.class.getSimpleName();
+	
 	private ArrayList<DataFlowNode> mOutputList = new ArrayList<DataFlowNode>();
 
-	public void inputData(String type, Object inputData) {
-		outputData(type, inputData);
-	}
-	
+	abstract public void inputData(String name, String type, Object inputData, int length);
+
 	public final boolean addOutputNode(DataFlowNode node) {
 		return mOutputList.add(node);
 	}
@@ -17,9 +19,9 @@ public class DataFlowNode {
 		return mOutputList.remove(node);
 	}
 	
-	protected final void outputData(String type, Object outputData) {
+	protected final void outputData(String name, String type, Object outputData, int length) {
 		for (DataFlowNode node: mOutputList) {
-			node.inputData(type, outputData);
+			node.inputData(name, type, outputData, length);
 		}
 	}
 }

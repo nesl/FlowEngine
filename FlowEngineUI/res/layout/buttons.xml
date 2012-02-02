@@ -44,9 +44,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Location Service" />
+            android:text="Zephyr Service" />
         <ToggleButton
-            android:id="@+id/toggle_location"
+            android:id="@+id/toggle_zephyr"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
         </LinearLayout>
