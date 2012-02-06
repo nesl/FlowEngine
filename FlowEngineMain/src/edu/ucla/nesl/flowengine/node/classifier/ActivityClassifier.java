@@ -1,35 +1,44 @@
 package edu.ucla.nesl.flowengine.node.classifier;
 
-import android.util.Log;
+import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class ActivityClassifier extends DataFlowNode {
 	private static final String TAG = ActivityClassifier.class.getSimpleName();
 	
 	private double[] mPower = null;
-	private double[] mAvgVar = null;
+	private boolean mIsMeanNew = false, mIsVarianceNew = false;
+	private double mMean, mVariance;
 
 	@Override
 	public void inputData(String name, String type, Object inputData, int length) {
-		if (name.equals("Goertzel")) {
+		if (name.contains("RMSGoertzel")) {
 			mPower = (double[])inputData;
-		} else if (name.equals("AverageVariance")) {
-			mAvgVar = (double[])inputData;
+		} else if (name.contains("RMSVariance")) {
+			mMean = (Double)inputData;
+			mIsMeanNew = true;
+		} else if (name.contains("RMSMean")) {
+			mVariance = (Double)inputData;
+			mIsVarianceNew = true;
 		}
 
-		if (mPower != null && mAvgVar != null) {
+		if (mPower != null && mIsMeanNew && mIsVarianceNew ) {
+			
 			String activity = classify();
+			
 			mPower = null; 
-			mAvgVar = null;
-			Log.d(TAG, "Activity: " + activity);
+			mIsMeanNew = false;
+			mIsVarianceNew = false;
+			
+			DebugHelper.log(TAG, "Activity: " + activity);
 		}
 	}
 	
 	private String classify()
 	{	
-		if (mAvgVar[1] <= 0.0047)
+		if (mVariance <= 0.0047)
 		{
-			if (mAvgVar[1] <= 0.0016) return "still";
+			if (mVariance <= 0.0016) return "still";
 			else
 			{
 				if (mPower[4] <= 0.1532)
@@ -44,7 +53,7 @@ public class ActivityClassifier extends DataFlowNode {
 		{
 			if (mPower[2] <= 60.3539)
 			{
-				if (mAvgVar[1] <= 0.0085)
+				if (mVariance <= 0.0085)
 				{
 					if (mPower[7] <= 0.0506) return "walk";
 					else

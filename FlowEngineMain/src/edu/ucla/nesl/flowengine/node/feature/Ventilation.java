@@ -1,21 +1,18 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
-public class IERatio extends DataFlowNode {
-	private static final String TAG = IERatio.class.getSimpleName();
-
+public class Ventilation extends DataFlowNode {
+	private static final String TAG = Ventilation.class.getSimpleName();
+	
 	@Override
 	public void inputData(String name, String type, Object inputData, int length) {
 		int[] data = (int[])inputData;
-		int inhalation = 0,exhalation = 0;
+		int temp = length;
+		double xx,yy;
+		double ventilation = 0;
 		
-		ArrayList<Integer> list=new ArrayList<Integer>();
-		int temp=length;
 		for(int i=0;i<temp;i+=4)
 		{
 			//check the starting whether it starts from valley or not. It should be valley
@@ -26,26 +23,28 @@ public class IERatio extends DataFlowNode {
 			if((i==0)&&(data[length-1]>data[length-3]))		//at the beginning the stopping condition is changed
 				temp=length-2;						//skipping the last one if it is peak
 			
-			if(i+4<length)
+			if(i+3<length)
 			{
-				inhalation=data[i+2]-data[i];
-				exhalation=data[i+4]-data[i+2];
-				float ieRatio=(float)inhalation/exhalation;
-				int raoundedIeRatio=(int)(ieRatio*10000);
-				list.add(new Integer(raoundedIeRatio));
+				xx=(data[i+2]-data[i])/64.0;
+				yy=data[i+3]-data[i+1];
+				ventilation+=xx*yy/2.0;
+//				int raoundedMinuteVentilation=(int)(MinuteVentilation*10000);
+//				list.add(new Integer(raoundedMinuteVentilation));
 			}
+			
 		}
 		
-		//converting the ArrayList to array
-		int ieRatio[]=new int[list.size()];
-		for(int j=0;j<list.size();j++)
-		{
-			ieRatio[j]=list.get(j).intValue();
-		}
+		//MinuteVentilation=MinuteVentilation*(data.length/4 -1);
 		
-		DebugHelper.dump(TAG, ieRatio);
+		/*int MV[]=new int[2];
+		MV[0]=(int)(MinuteVentilation*10000);
+		MV[1]=MV[0];
+		return MV;*/
 		
-		outputData(name + "IERatio", "int[]", ieRatio, ieRatio.length);
+		ventilation *= 10000;
+		
+		DebugHelper.log(TAG, String.format("ventilation: %.3f", ventilation));
+		
+		outputData(name + "Ventilation", "double", ventilation, 0);
 	}
-	
 }

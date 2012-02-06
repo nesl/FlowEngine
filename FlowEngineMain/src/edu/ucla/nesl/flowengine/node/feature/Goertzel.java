@@ -1,6 +1,6 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
-import android.util.Log;
+import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Goertzel extends DataFlowNode {
@@ -43,12 +43,8 @@ public class Goertzel extends DataFlowNode {
 			i += 1;
 		}
 		
-		String debug = "Goertzel: ";
-		for (double value: mPowerSpectrum) {
-			debug += String.format("%.2f, ", value);
-		}
-		Log.d(TAG, debug);
+		DebugHelper.dump(TAG, mPowerSpectrum);
 		
-		outputData("Goertzel", "double[]", mPowerSpectrum, mPowerSpectrum.length);
+		outputData(name + "Goertzel", "double[]", mPowerSpectrum, mPowerSpectrum.length);
 	}
 }

@@ -52,6 +52,7 @@ public class ZephyrService extends Service implements Runnable {
 			mSocket = device.createRfcommSocketToServiceRecord(uuid);
 		} 
 		catch (IOException e) { 
+			Log.e(TAG, "Exception from createRfcommSocketToServiceRecord()..");
 			e.printStackTrace();
 			return false;
 		}
@@ -63,15 +64,14 @@ public class ZephyrService extends Service implements Runnable {
 		try {
 			// Connect the device through the socket. This will block
 			// until it succeeds or throws an exception
-			Log.d(TAG, "Trying to connect...");
 			mSocket.connect();
-			Log.d(TAG, "Connected.");
 		} catch (IOException e) {
-			Log.d(TAG, "Failed to connect to " + deviceAddress);
+			Log.e(TAG, "Failed to connect to " + deviceAddress);
 			e.printStackTrace();
 			try {
 				mSocket.close();
 			} catch (IOException e1) {
+				Log.e(TAG, "IOException from mSocket.close()..");
 				e1.printStackTrace();
 			}
 			mSocket = null;
@@ -158,7 +158,7 @@ public class ZephyrService extends Service implements Runnable {
 	    		
 	    		// parsing receivedBytes
 	    		if (msgID == 0x20) {
-	    			Log.d(TAG, "Received General Data Packet");
+	    			//Log.d(TAG, "Received General Data Packet");
 	    			int skinTemp = (receivedBytes[16]&0xFF) | ((receivedBytes[17]&0xFF)<<8);
 	    			try {
 						mAPI.pushIntData(SensorName.SKIN_TEMPERATURE, skinTemp, 0);
@@ -166,7 +166,7 @@ public class ZephyrService extends Service implements Runnable {
 						e.printStackTrace();
 					}
 	    		} else if (msgID == 0x21) {
-	    			Log.d(TAG, "Received Breathing Waveform Packet");
+	    			//Log.d(TAG, "Received Breathing Waveform Packet");
 	    			int[] breathingData = new int[18];
 	    			for (int i=12, j=0; i<35; i+=5)	{
 	    				breathingData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
@@ -183,7 +183,7 @@ public class ZephyrService extends Service implements Runnable {
 						e.printStackTrace();
 					}
 	    		} else if (msgID == 0x22) {
-	    			Log.d(TAG, "Received ECG Waveform Packet");
+	    			//Log.d(TAG, "Received ECG Waveform Packet");
 	    			int[] ecgData = new int[63];
 	    			for (int i=12, j=0; i<91; i+=5) {
 	    				ecgData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
@@ -206,7 +206,7 @@ public class ZephyrService extends Service implements Runnable {
 						e.printStackTrace();
 					}
 	    		} else if (msgID == 0x25) {
-	    			Log.d(TAG, "Received Accelerometer Packet");
+	    			//Log.d(TAG, "Received Accelerometer Packet");
 	    			int[] accData = new int[60];
 	    			
 	    			for (int i=12, j=0; i<87; i+=5) {
@@ -238,41 +238,48 @@ public class ZephyrService extends Service implements Runnable {
 							e.printStackTrace();
 						}
 	    			}
+	    		} else if (msgID == 0x23 ) {
+	    			//Log.d(TAG, "Recevied lifesign from Zephyr.");
 	    		} else {
-	    			Log.d(TAG, "Received something else... msgID: 0x" + Integer.toHexString(msgID));
+	    			Log.d(TAG, "Received something else.. msgID: 0x" + Integer.toHexString(msgID));
+	    		}
+
+	    		long currTime = System.currentTimeMillis();
+	    		if (currTime - lastTime > 8000)
+	    		{
+	    			// Sending lifesign. (Zephyr requires this at least every 10 seconds)
+	    	        if (mOutputStream != null)
+	    	        {
+	    		        byte lifesign[] = { 0x02, 0x23, 0x00, 0x00, 0x03 };
+    		        	mOutputStream.write(lifesign);
+	    		        //Log.d(TAG, "Sent Lifesign");
+	    	        } else {
+	    	        	throw new NullPointerException("mOutputStream is null");
+	    	        }
+	    	        lastTime = System.currentTimeMillis();
 	    		}
     		}
     		catch(IOException e) {
     			Log.d(TAG, "IOException while run()..");
     			e.printStackTrace();
-    			break;
+    			
+				try {
+					Log.d(TAG, "Closing socket");
+					mSocket.close();
+					Log.d(TAG, "Socket closed");
+				} catch (IOException e1) {
+					Log.d(TAG, "Failed to close the bt socket");			
+					e1.printStackTrace();
+					mSocket = null;
+					break;
+				}
+				Log.d(TAG, "재접속시도 1..");
+				int numRetries = 2;
+				while (!connect(mDeviceAddress)) {
+					Log.d(TAG, "재접속시도 " + numRetries + "..");
+					numRetries += 1;
+				}
     		}
-    		
-    		long currTime = System.currentTimeMillis();
-    		if (currTime - lastTime > 8000)
-    		{
-    			// Sending lifesign. (Zephyr requires this at least every 10 seconds)
-    	        if (mOutputStream != null)
-    	        {
-    		        byte lifesign[] = { 0x02, 0x23, 0x00, 0x00, 0x03 };
-    		        try {
-    		        	mOutputStream.write(lifesign);
-    		        } 
-    		        catch (IOException e)
-    		        {
-    		        	Log.d(TAG, "IOException from OutputStream while os.write()");
-    		        }
-    		        Log.d(TAG, "Sent Lifesign");
-    	        } else {
-    	        	Log.d(TAG, "Outputstream is null..");
-    	        	break;
-    	        }
-    	        lastTime = System.currentTimeMillis();
-    		}
-    		
-			//if (numBytes > 0)
-			//	receivedMsgHandler.obtainMessage(0, numBytes, -1, receivedBytes).sendToTarget();
-    		
 		} // end while
 		
 		if (mSocket != null) {
@@ -287,6 +294,7 @@ public class ZephyrService extends Service implements Runnable {
 		}
 		mSocket = null;
 		mIsStopRequest = false;
+		Log.d(TAG, "Receive thrad stopped.");
 	}
 
 	private void stop() {
@@ -302,15 +310,18 @@ public class ZephyrService extends Service implements Runnable {
 			mReceiveThread = new Thread(this);
 		}
 		
+		Log.d(TAG, "Trying to connect..");
 		if (mSocket == null) {
-			if (connect(mDeviceAddress)) {
-				Log.d(TAG, "connected to " + mDeviceAddress);
-				mReceiveThread.start();
+			while (!connect(mDeviceAddress)) {
+				Log.d(TAG, "Retrying..");
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
-			else
-			{
-				Log.d(TAG, "FAILED to connect to " + mDeviceAddress);
-			}
+			Log.d(TAG, "Start receiving thread..");
+			mReceiveThread.start();
 		}
 	}
 	

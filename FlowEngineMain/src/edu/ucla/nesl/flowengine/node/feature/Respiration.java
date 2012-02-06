@@ -1,20 +1,18 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
-public class IERatio extends DataFlowNode {
-	private static final String TAG = IERatio.class.getSimpleName();
-
+public class Respiration extends DataFlowNode {
+	private static final String TAG = Respiration.class.getSimpleName();
+	
 	@Override
 	public void inputData(String name, String type, Object inputData, int length) {
 		int[] data = (int[])inputData;
-		int inhalation = 0,exhalation = 0;
+		int inhalation = 0, exhalation = 0;
 		
-		ArrayList<Integer> list=new ArrayList<Integer>();
+		ArrayList<Integer> list = new ArrayList<Integer>();
 		int temp=length;
 		for(int i=0;i<temp;i+=4)
 		{
@@ -30,22 +28,21 @@ public class IERatio extends DataFlowNode {
 			{
 				inhalation=data[i+2]-data[i];
 				exhalation=data[i+4]-data[i+2];
-				float ieRatio=(float)inhalation/exhalation;
-				int raoundedIeRatio=(int)(ieRatio*10000);
-				list.add(new Integer(raoundedIeRatio));
+				float Respiration=(float)inhalation+(float)exhalation;
+				int raoundedRespiration=(int)(Respiration*10000);
+				list.add(new Integer(raoundedRespiration));
 			}
 		}
 		
 		//converting the ArrayList to array
-		int ieRatio[]=new int[list.size()];
+		int respiration[]=new int[list.size()];
 		for(int j=0;j<list.size();j++)
 		{
-			ieRatio[j]=list.get(j).intValue();
+			respiration[j]=list.get(j).intValue();
 		}
+
+		DebugHelper.dump(TAG, respiration);
 		
-		DebugHelper.dump(TAG, ieRatio);
-		
-		outputData(name + "IERatio", "int[]", ieRatio, ieRatio.length);
+		outputData(name + "Respiration", "int[]", respiration, respiration.length);
 	}
-	
 }

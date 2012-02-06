@@ -1,10 +1,8 @@
 package edu.ucla.nesl.flowengine.node;
 
-import android.util.Log;
+//TODO: buffering based on timestamp.
 
-//TODO: bufferring based on timestamp.
-
-public class BufferNode<T> extends DataFlowNode {
+public class BufferNode extends DataFlowNode {
 	private static final String TAG = BufferNode.class.getSimpleName();
 
 	private Object mBuffer;
@@ -13,19 +11,8 @@ public class BufferNode<T> extends DataFlowNode {
 	private String mDataName;
 	private String mDataType;
 
-	public BufferNode(int bufferSize/*, String name, String type*/) {
+	public BufferNode(int bufferSize) {
 		mBufferSize = bufferSize;
-		//mDataName = name;
-		//mDataType = type;
-		/*if (type.contains("int")) {
-			mBuffer = new int[bufferSize];
-		} else if (type.contains("long")) {
-			mBuffer = new long[bufferSize];
-		} else if (type.contains("double")) {
-			mBuffer = new double[bufferSize];
-		} else if (type.contains("float")) {
-			mBuffer = new float[bufferSize];
-		}*/
 	}
 
 	private void outputData() {
@@ -35,12 +22,6 @@ public class BufferNode<T> extends DataFlowNode {
 			outputData(mDataName, mDataType + "[]", mBuffer, mBufferSize);
 		}
 		mIndex = 0;
-
-		String str = "buffer: ";
-		for (int value: (int[])mBuffer) {
-			str += value + ", ";
-		}
-		Log.d(TAG, str);
 	}
 
 	@Override
@@ -58,8 +39,7 @@ public class BufferNode<T> extends DataFlowNode {
 				mBuffer = new float[mBufferSize];
 			}
 		} else if (!name.equals(mDataName) || !type.equals(mDataType)) {
-			Log.d(TAG, "Type or name mismatch.");
-			return;
+			throw new IllegalArgumentException(String.format("name(%s) and type(%s) doesn't match.", name, type));
 		}
 
 		if (!mDataType.contains("[]")) {
@@ -104,91 +84,6 @@ public class BufferNode<T> extends DataFlowNode {
 					outputData();
 				}
 			}
-			/*} else if (mDataType.contains("double")) {
-				double[] data = (double[])inputData;
-				if (remainingSize >= data.length) {
-					System.arraycopy(data, 0, mBuffer, mIndex, data.length);
-					mIndex += data.length;
-					if (mIndex >= mBufferSize) {
-						outputData();
-					}
-				} else {
-					System.arraycopy(data, 0, mBuffer, mIndex, remainingSize);
-					mIndex += remainingSize;
-					if (mIndex >= mBufferSize) {
-						outputData();
-					}
-
-					int nextSize = data.length - remainingSize;
-					while (nextSize > mBufferSize) {
-						System.arraycopy(data, remainingSize, mBuffer, 0, mBufferSize);	
-						outputData();
-						nextSize -= mBufferSize;
-					}
-
-					System.arraycopy(data, remainingSize, mBuffer, 0, nextSize);
-					mIndex += nextSize;
-					if (mIndex >= mBufferSize) {
-						outputData();
-					}
-				}
-			} else if (mDataType.contains("float")) {
-				float[] data = (float[])inputData;
-				if (remainingSize >= data.length) {
-					System.arraycopy(data, 0, mBuffer, mIndex, data.length);
-					mIndex += data.length;
-					if (mIndex >= mBufferSize) {
-						outputData();
-					}
-				} else {
-					System.arraycopy(data, 0, mBuffer, mIndex, remainingSize);
-					mIndex += remainingSize;
-					if (mIndex >= mBufferSize) {
-						outputData();
-					}
-
-					int nextSize = data.length - remainingSize;
-					while (nextSize > mBufferSize) {
-						System.arraycopy(data, remainingSize, mBuffer, 0, mBufferSize);	
-						outputData();
-						nextSize -= mBufferSize;
-					}
-
-					System.arraycopy(data, remainingSize, mBuffer, 0, nextSize);
-					mIndex += nextSize;
-					if (mIndex >= mBufferSize) {
-						outputData();
-					}
-				}
-			} else if (mDataType.contains("long")) {
-				long[] data = (long[])inputData;
-				if (remainingSize >= data.length) {
-					System.arraycopy(data, 0, mBuffer, mIndex, data.length);
-					mIndex += data.length;
-					if (mIndex >= mBufferSize) {
-						outputData();
-					}
-				} else {
-					System.arraycopy(data, 0, mBuffer, mIndex, remainingSize);
-					mIndex += remainingSize;
-					if (mIndex >= mBufferSize) {
-						outputData();
-					}
-
-					int nextSize = data.length - remainingSize;
-					while (nextSize > mBufferSize) {
-						System.arraycopy(data, remainingSize, mBuffer, 0, mBufferSize);	
-						outputData();
-						nextSize -= mBufferSize;
-					}
-
-					System.arraycopy(data, remainingSize, mBuffer, 0, nextSize);
-					mIndex += nextSize;
-					if (mIndex >= mBufferSize) {
-						outputData();
-					}
-				}
-			} */
 		} 
 	}
 }

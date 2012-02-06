@@ -12,16 +12,30 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Parcel;
 import android.os.RemoteException;
-import android.util.Log;
 import edu.ucla.nesl.flowengine.aidl.AbstractDeviceInterface;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineDeviceAPI;
 import edu.ucla.nesl.flowengine.node.BufferNode;
 import edu.ucla.nesl.flowengine.node.SeedNode;
 import edu.ucla.nesl.flowengine.node.classifier.ActivityClassifier;
-import edu.ucla.nesl.flowengine.node.feature.AverageVariance;
+import edu.ucla.nesl.flowengine.node.classifier.StressClassifier;
+import edu.ucla.nesl.flowengine.node.feature.BandPower;
+import edu.ucla.nesl.flowengine.node.feature.Exhalation;
 import edu.ucla.nesl.flowengine.node.feature.Goertzel;
 import edu.ucla.nesl.flowengine.node.feature.IERatio;
+import edu.ucla.nesl.flowengine.node.feature.Inhalation;
+import edu.ucla.nesl.flowengine.node.feature.LombPeriodogram;
+import edu.ucla.nesl.flowengine.node.feature.Mean;
+import edu.ucla.nesl.flowengine.node.feature.Median;
+import edu.ucla.nesl.flowengine.node.feature.Percentile;
+import edu.ucla.nesl.flowengine.node.feature.QuartileDeviation;
+import edu.ucla.nesl.flowengine.node.feature.RRInterval;
+import edu.ucla.nesl.flowengine.node.feature.RealPeakValley;
+import edu.ucla.nesl.flowengine.node.feature.Respiration;
 import edu.ucla.nesl.flowengine.node.feature.RootMeanSquare;
+import edu.ucla.nesl.flowengine.node.feature.Stretch;
+import edu.ucla.nesl.flowengine.node.feature.Variance;
+import edu.ucla.nesl.flowengine.node.feature.Ventilation;
+import edu.ucla.nesl.flowengine.node.operation.Sort;
 import edu.ucla.nesl.util.NotificationHelper;
 
 public class FlowEngine extends Service {
@@ -30,11 +44,6 @@ public class FlowEngine extends Service {
 	private static final String BUNDLE_TYPE = "type";
 	private static final String BUNDLE_DATA = "data";
 	private static final String BUNDLE_LENGTH = "length";
-	/*private static final String DATA_TYPE_INT = "int";
-	private static final String DATA_TYPE_INT_ARRAY = "int[]";
-	private static final String DATA_TYPE_DOUBLE = "double";
-	private static final String DATA_TYPE_DOUBLE_ARRAY = "double[]";
-	private static final String DATA_TYPE_ARRAY = "[]";*/
 	
 	int mNextDeviceID = 1;
 	
@@ -46,6 +55,7 @@ public class FlowEngine extends Service {
 	private Handler mHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
+			//DebugHelper.log(TAG, String.format("Thread name: %s, msg.what: %d", Thread.currentThread().getName(), msg.what));
 			for (SeedNode seed: mSeedNodeList) {
 				if (seed.mSeedName == msg.what) {
 					Bundle bundle = (Bundle)msg.obj;
@@ -59,7 +69,7 @@ public class FlowEngine extends Service {
 					} else if (type.equals("int")) {
 						seed.inputData(name, type, bundle.getInt(BUNDLE_DATA), length);
 					} else {
-						Log.e(TAG, "Unknown data_type: " + type);
+						throw new IllegalArgumentException("Unknown data_type: " + type);
 					}
 				}
 			}
@@ -73,7 +83,6 @@ public class FlowEngine extends Service {
 			try {
 				return super.onTransact(code, data, reply, flags);
 			} catch (RuntimeException e) {
-				Log.w(TAG, "Unexpected remote exception", e);
 				throw e;
 			}
 		}
@@ -85,7 +94,7 @@ public class FlowEngine extends Service {
 				int deviceID = mNextDeviceID;
 				mNextDeviceID += 1;
 				deviceMap.put(deviceID, device);
-				Log.d(TAG, "Added device ID: " + Integer.toString(deviceID));
+				DebugHelper.log(TAG, "Added device ID: " + Integer.toString(deviceID));
 				return deviceID;
 			}
 		}
@@ -99,6 +108,7 @@ public class FlowEngine extends Service {
 
 		@Override
 		public void pushDoubleArrayData(int seed_name, double[] data, int length) throws RemoteException {
+			//DebugHelper.log(TAG, String.format("Thread name: %s", Thread.currentThread().getName()));
 			Bundle bundle = new Bundle();
 			bundle.putString(BUNDLE_TYPE, "double[]");
 			bundle.putDoubleArray(BUNDLE_DATA, data);
@@ -108,6 +118,7 @@ public class FlowEngine extends Service {
 
 		@Override
 		public void pushIntData(int seed_name, int data, int length) throws RemoteException {
+			//DebugHelper.log(TAG, String.format("Thread name: %s", Thread.currentThread().getName()));
 			Bundle bundle = new Bundle();
 			bundle.putString(BUNDLE_TYPE, "int");
 			bundle.putInt(BUNDLE_DATA, data);
@@ -117,6 +128,7 @@ public class FlowEngine extends Service {
 
 		@Override
 		public void pushIntArrayData(int seed_name, int[] data, int length) throws RemoteException {
+			//DebugHelper.log(TAG, String.format("Thread name: %s", Thread.currentThread().getName()));
 			Bundle bundle = new Bundle();
 			bundle.putString(BUNDLE_TYPE, "int[]");
 			bundle.putIntArray(BUNDLE_DATA, data);
@@ -125,39 +137,10 @@ public class FlowEngine extends Service {
 		}
 	};
 
-	
-	/*private String dumpWaveSegment(final WaveSegment ws) {
-		String wsDump = "timestamp:" + Long.toString(ws.timestamp) 
-				+ ", interval:" + Long.toString(ws.interval) 
-				+ ", location:";
-		wsDump += "(" + Double.toString(ws.latitude) + "," + Double.toString(ws.longitude) + ")";
-		wsDump += ", format:";
-		if (ws.format == null) {
-			wsDump += "null";
-		} else {
-			wsDump += "{";
-			for (int i = 0; i < ws.numChannel; i++) {
-				wsDump += ws.format[i] + ",";
-			}
-			wsDump += "}";
-		}
-		wsDump += ", data:";
-		if (ws.data == null) {
-			wsDump += "null";
-		} else {
-			wsDump += "{";
-			for (int i = 0; i < ws.numData; i++) {
-				wsDump += Double.toString(ws.data[i]) + ",";
-			}
-			wsDump += "}";
-		}
-		return wsDump;
-	}*/
-	
 	@Override
 	public IBinder onBind(Intent intent) {
 		if (FlowEngine.class.getName().equals(intent.getAction())) {
-			Log.d(TAG, "Bound by intent " + intent);
+			DebugHelper.log(TAG, "Bound by intent " + intent);
 			return deviceApiEndpoint;
 		} else {
 			return null;
@@ -165,33 +148,143 @@ public class FlowEngine extends Service {
 	}
 
 	private void configureGraph() {
-		//SeedNode accelerometer = new SeedNode(SensorName.ACCELEROMETER);
-		//SeedNode ecg = new SeedNode(SensorName.ECG);
+		//TODO: seed node need to be initialized when device services are attached.
+		SeedNode accelerometer = new SeedNode(SensorName.ACCELEROMETER);
+		SeedNode ecg = new SeedNode(SensorName.ECG);
 		SeedNode rip = new SeedNode(SensorName.RIP);
 		//SeedNode skintemp = new SeedNode(SensorName.SKIN_TEMPERATURE);
-		//mSeedNodeList.add(accelerometer);
-		//mSeedNodeList.add(ecg);
+		mSeedNodeList.add(accelerometer);
+		mSeedNodeList.add(ecg);
 		mSeedNodeList.add(rip);
 		//mSeedNodeList.add(skintemp);
 
 		// Activity classifier
-		/*RootMeanSquare rms = new RootMeanSquare();
+		RootMeanSquare rms = new RootMeanSquare();
 		BufferNode rmsBuffer = new BufferNode(50);
-		AverageVariance avgVar = new AverageVariance();
+		Mean rmsMean = new Mean();
+		Variance rmsVariance = new Variance();
 		Goertzel goertzel = new Goertzel(1.0, 10.0, 1.0);
 		ActivityClassifier activity= new ActivityClassifier();
-		goertzel.addOutputNode(activity);
-		avgVar.addOutputNode(activity);
-		rmsBuffer.addOutputNode(goertzel);
-		rmsBuffer.addOutputNode(avgVar);
-		rms.addOutputNode(rmsBuffer);
-		accelerometer.addOutputNode(rms);*/
 		
-		//Stress classifier
+		accelerometer.addOutputNode(rms);
+		rms.addOutputNode(rmsBuffer);
+		rmsBuffer.addOutputNode(goertzel);
+		rmsBuffer.addOutputNode(rmsVariance);
+		rmsBuffer.addOutputNode(rmsMean);
+		goertzel.addOutputNode(activity);
+		rmsMean.addOutputNode(activity);
+		rmsMean.addOutputNode(rmsVariance);
+		rmsVariance.addOutputNode(activity);
+		
+		// Stress classifier
+		StressClassifier stress = new StressClassifier();
+		
+		final int RIP_SAMPLE_RATE = 18; // Hz
+		final int RIP_BUFFER_DURATION = 60; // sec
+		
+		BufferNode ripBuffer = new BufferNode(RIP_SAMPLE_RATE * RIP_BUFFER_DURATION);
+		Sort ripSort = new Sort();
+		Percentile ripPercentile = new Percentile();
+		RealPeakValley rpv = new RealPeakValley(ripPercentile, RIP_SAMPLE_RATE, RIP_BUFFER_DURATION);
 		IERatio ieratio = new IERatio();
-		BufferNode ripBuffer = new BufferNode(18 * 60);
-		ripBuffer.addOutputNode(ieratio);
+		Respiration respiration = new Respiration();
+		Stretch stretch = new Stretch();
+		Inhalation inhalation = new Inhalation();
+		Exhalation exhalation = new Exhalation();
+		Ventilation ventilation = new Ventilation();
+		
+		Sort respirationSort = new Sort();
+		Percentile respirationPercentile = new Percentile();
+		QuartileDeviation respirationQD = new QuartileDeviation(respirationPercentile);
+		Sort ieRatioSort = new Sort();
+		Median ieRatioMedian = new Median();
+		Mean inhaleMean = new Mean();
+		Sort exhaleSort = new Sort();
+		Percentile exhalePercentile = new Percentile();
+		QuartileDeviation exhaleQD = new QuartileDeviation(exhalePercentile);
+		Sort stretchSort = new Sort();
+		Median stretchMedian = new Median();
+		Percentile stretchPercentile = new Percentile(80.0);
+		QuartileDeviation stretchQD = new QuartileDeviation(stretchPercentile);
+		
 		rip.addOutputNode(ripBuffer);
+		
+		//order is important b/c rpv pulls percentile.
+		ripBuffer.addOutputNode(ripSort);
+		ripBuffer.addOutputNode(rpv);
+
+		ripBuffer.addOutputNode(stretch);
+		ripSort.addOutputNode(ripPercentile);
+		rpv.addOutputNode(respiration);
+		rpv.addOutputNode(ieratio);
+		rpv.addOutputNode(inhalation);
+		rpv.addOutputNode(exhalation);
+		rpv.addOutputNode(ventilation);
+		rpv.addOutputNode(stretch);
+		
+		// order is important: QD pulls Percentile
+		respiration.addOutputNode(respirationSort);
+		respiration.addOutputNode(respirationQD);
+		respirationSort.addOutputNode(respirationPercentile);
+
+		ieratio.addOutputNode(ieRatioSort);
+		ieRatioSort.addOutputNode(ieRatioMedian);
+		inhalation.addOutputNode(inhaleMean);
+		
+		// order is important: QD pulls Percetile
+		exhalation.addOutputNode(exhaleSort);
+		exhalation.addOutputNode(exhaleQD);
+		exhaleSort.addOutputNode(exhalePercentile);
+
+		stretch.addOutputNode(stretchSort);
+		stretch.addOutputNode(stretchQD);
+		
+		stretchSort.addOutputNode(stretchPercentile);
+		stretchSort.addOutputNode(stretchMedian);
+		
+		final int ECG_SAMPLE_RATE = 250; // Hz
+		final int ECG_BUFFER_DURATION = 60; // sec
+		BufferNode ecgBuffer = new BufferNode(ECG_SAMPLE_RATE * ECG_BUFFER_DURATION);
+		RRInterval rrInterval = new RRInterval();
+		Sort rrSort = new Sort();
+		Median rrMedian = new Median();
+		Percentile rrPercentile = new Percentile(80.0);
+		QuartileDeviation rrQD = new QuartileDeviation(rrPercentile);
+		Mean rrMean = new Mean();
+		Variance rrVariance = new Variance();
+		LombPeriodogram lomb = new LombPeriodogram();
+		BandPower lombBandPower = new BandPower(0.1, 0.2);
+		
+		ecg.addOutputNode(ecgBuffer);
+		ecgBuffer.addOutputNode(rrInterval);
+		
+		// order is important here.
+		rrInterval.addOutputNode(rrSort);
+		rrInterval.addOutputNode(rrQD);
+		
+		rrInterval.addOutputNode(lomb);
+		rrInterval.addOutputNode(rrMean);
+		rrInterval.addOutputNode(rrVariance);
+		rrSort.addOutputNode(rrMedian);
+		rrSort.addOutputNode(rrPercentile);
+		rrMean.addOutputNode(rrVariance);
+		rrMean.addOutputNode(lomb);
+		rrVariance.addOutputNode(lomb);
+		lomb.addOutputNode(lombBandPower);
+		
+		respirationQD.addOutputNode(stress);
+		ieRatioMedian.addOutputNode(stress);
+		ventilation.addOutputNode(stress);
+		inhaleMean.addOutputNode(stress);
+		exhaleQD.addOutputNode(stress);
+		stretchMedian.addOutputNode(stress);
+		stretchPercentile.addOutputNode(stress);
+		stretchQD.addOutputNode(stress);
+		rrMedian.addOutputNode(stress);
+		rrPercentile.addOutputNode(stress);
+		rrQD.addOutputNode(stress);
+		rrMean.addOutputNode(stress);
+		lombBandPower.addOutputNode(stress);
 	}
 	
 	@Override
@@ -204,14 +297,14 @@ public class FlowEngine extends Service {
 		
 		configureGraph();
 		
-		Log.i(TAG, "Service creating");
+		DebugHelper.logi(TAG, "Service creating");
 	}
 	
 	@Override
 	public void onDestroy() {
 		//Debug.stopMethodTracing();
 		
-		Log.i(TAG, "Service destroying");
+		DebugHelper.logi(TAG, "Service destroying");
 		
 		for (Map.Entry<Integer, AbstractDevice> entry : deviceMap.entrySet()) {
 			try {

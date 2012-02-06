@@ -1,6 +1,6 @@
 package edu.ucla.nesl.flowengine.node;
 
-import android.util.Log;
+import edu.ucla.nesl.flowengine.DebugHelper;
 
 public class SeedNode extends DataFlowNode {
 	private static final String TAG = SeedNode.class.getSimpleName();
@@ -13,7 +13,7 @@ public class SeedNode extends DataFlowNode {
 
 	@Override
 	public void inputData(String name, String type, Object inputData, int length) {
-		Log.d(TAG, String.format("mSeedName = %d, name = %s, type = %s", mSeedName, name, type));
+		//DebugHelper.log(TAG, String.format("mSeedName = %d, name = %s, type = %s", mSeedName, name, type));
 		outputData(name, type, inputData, length);
 	}
 }

@@ -1,12 +1,11 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
-import android.util.Log;
+import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class RootMeanSquare extends DataFlowNode {
 	private static final String TAG = RootMeanSquare.class.getSimpleName();
 	
-	public String mName = "RootMeanSquare";
 	public String mType = "double";
 	
 	@Override
@@ -20,6 +19,9 @@ public class RootMeanSquare extends DataFlowNode {
 			totalForce += Math.pow(value, 2.0);
 		}
 		totalForce = Math.sqrt(totalForce);
-		outputData("RootMeanSquare", "double", totalForce, 0);
+		
+		//DebugHelper.log(TAG, "RMS: " + totalForce);
+		
+		outputData(name + "RMS", "double", totalForce, 0);
 	}
 }

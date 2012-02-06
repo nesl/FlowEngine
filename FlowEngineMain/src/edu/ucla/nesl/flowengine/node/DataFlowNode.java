@@ -2,8 +2,6 @@ package edu.ucla.nesl.flowengine.node;
 
 import java.util.ArrayList;
 
-import android.util.Log;
-
 public abstract class DataFlowNode {
 	private static final String TAG = DataFlowNode.class.getSimpleName();
 	
