@@ -9,12 +9,30 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class RRInterval extends DataFlowNode {
 	private static final String TAG = RRInterval.class.getSimpleName();
 	
-	private static int RR_ptr = 0;
-	int lastPeakTime = 0;
-	private int[] RR = new int[256];
+	private static int mRR_ptr = 0;
+	int mLastPeakTime = 0;
+	private int[] mRR = new int[256];
 
+	private int[] calculateRRInterval(int[] data) {
+		int[] tbody = lowpass(data);
+		int[] tbandbody0 = bandpass(tbody);
+		int[] tdiffbody0 = diffsqfilt(tbandbody0);
+		int[] tlpbody0 = lpfilt(tdiffbody0);
+		mRR = findpks(tlpbody0);
+
+		int[] return_RR = new int[mRR_ptr];
+		System.arraycopy(mRR, 0, return_RR, 0, mRR_ptr);
+
+		Arrays.fill(mRR, 0, mRR_ptr, 0);
+		mRR_ptr = 0;
+
+		DebugHelper.dump(TAG, return_RR);
+		
+		return return_RR;
+	}
+	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
@@ -23,23 +41,9 @@ public class RRInterval extends DataFlowNode {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
-		int[] databuffer = (int[])inputData;
-		
-		int[] tbody = lowpass(databuffer);
-		int[] tbandbody0 = bandpass(tbody);
-		int[] tdiffbody0 = diffsqfilt(tbandbody0);
-		int[] tlpbody0 = lpfilt(tdiffbody0);
-		RR = findpks(tlpbody0);
+		int[] rrInterval = calculateRRInterval((int[])inputData);
 
-		int[] return_RR = new int[RR_ptr];
-		System.arraycopy(RR, 0, return_RR, 0, RR_ptr);
-
-		Arrays.fill(RR, 0, RR_ptr, 0);
-		RR_ptr = 0;
-
-		DebugHelper.dump(TAG, return_RR);
-		
-		outputData(name + "RRInterval", "int[]", return_RR, return_RR.length, timestamp);
+		output(name + "RRInterval", "int[]", rrInterval, rrInterval.length, timestamp);
 	}
 	
 	private int[] findpks(int[] tlpbody02) {
@@ -76,15 +80,15 @@ public class RRInterval extends DataFlowNode {
 		for (int j = 0; j < count; j++) {
 			x = pks[j];
 			curPeak = valuepks[j];
-			if (curPeak > THR1 && x - lastPeakTime > min_distance) {
+			if (curPeak > THR1 && x - mLastPeakTime > min_distance) {
 				SPK = (float) (curPeak * 0.125 + SPK * 0.875);
-				RR[RR_ptr] = pks[j] - lastPeakTime;
+				mRR[mRR_ptr] = pks[j] - mLastPeakTime;
 				// out.println(RR[RR_ptr]);
-				if (RR[RR_ptr] <= RRAVERAGE_1 * RR_high_limit
-						&& RR[RR_ptr] >= RRAVERAGE_1 * RR_low_limit) {
-					RR_SEL[RR_sel_ptr] = (int) RR[RR_ptr];
+				if (mRR[mRR_ptr] <= RRAVERAGE_1 * RR_high_limit
+						&& mRR[mRR_ptr] >= RRAVERAGE_1 * RR_low_limit) {
+					RR_SEL[RR_sel_ptr] = (int) mRR[mRR_ptr];
 					RR_sel_ptr = RR_sel_ptr + 1;
-					RR_ptr = RR_ptr + 1;
+					mRR_ptr = mRR_ptr + 1;
 					if (RR_sel_ptr == 8) {
 						RR_sel_ptr = 0;
 						for (int m = 0; m < 8; m++) {
@@ -94,23 +98,23 @@ public class RRInterval extends DataFlowNode {
 					}
 					temp1 = 0;
 				}
-				lastPeakTime = x;
+				mLastPeakTime = x;
 				countq = countq + 1;
-			} else if (pks[j] - lastPeakTime > RRAVERAGE_1 * RR_missed_limit) {
+			} else if (pks[j] - mLastPeakTime > RRAVERAGE_1 * RR_missed_limit) {
 				for (int k = 1; k < j; k++) {
 					curPeak = valuepks[k];
 					if (curPeak > SPK * 0.25) {
 						if (curPeak > THR2
-								&& (pks[k] - lastPeakTime > min_distance)) {
+								&& (pks[k] - mLastPeakTime > min_distance)) {
 							countq = countq + 1;
 							SPK = (float) (0.125 * curPeak + 0.875 * SPK);
-							RR[RR_ptr] = pks[k] - lastPeakTime;
-							lastPeakTime = pks[k];
-							if (RR[RR_ptr] <= RRAVERAGE_1 * RR_high_limit
-									&& RR[RR_ptr] >= RRAVERAGE_1 * RR_low_limit) {
-								RR_SEL[RR_sel_ptr] = (int) RR[RR_ptr];
+							mRR[mRR_ptr] = pks[k] - mLastPeakTime;
+							mLastPeakTime = pks[k];
+							if (mRR[mRR_ptr] <= RRAVERAGE_1 * RR_high_limit
+									&& mRR[mRR_ptr] >= RRAVERAGE_1 * RR_low_limit) {
+								RR_SEL[RR_sel_ptr] = (int) mRR[mRR_ptr];
 								RR_sel_ptr = RR_sel_ptr + 1;
-								RR_ptr = RR_ptr + 1;
+								mRR_ptr = mRR_ptr + 1;
 								if (RR_sel_ptr == 8) {
 									RR_sel_ptr = 0;
 									for (int m = 0; m < 8; m++) {
@@ -129,8 +133,8 @@ public class RRInterval extends DataFlowNode {
 			THR1 = (float) (NPK + (SPK - NPK) * 0.25);
 			THR2 = THR1 / 2;
 		}
-		lastPeakTime = lastPeakTime - SIZE;
-		return RR;
+		mLastPeakTime = mLastPeakTime - SIZE;
+		return mRR;
 	}
 
 	// First low pass filter

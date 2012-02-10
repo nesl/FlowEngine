@@ -7,16 +7,7 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class Median extends DataFlowNode {
 	private static final String TAG = Median.class.getSimpleName();
 
-	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
-		if (length <= 0) {
-			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
-			return;
-		}
-		if (!name.contains("Sorted")) {
-			throw new UnsupportedOperationException("Unsupported name: " + name);
-		}
-		
+	private double calculateMean(String type, Object inputData, int length) {
 		double result;
 
 		if (type.equals("int[]")) {
@@ -45,6 +36,21 @@ public class Median extends DataFlowNode {
 		
 		DebugHelper.log(TAG, "Median: " + result);
 		
-		outputData(name.replace("Sorted", "Median"), "double", result, 0, timestamp);
+		return result;
+	}
+	
+	@Override
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!name.contains("Sorted")) {
+			throw new UnsupportedOperationException("Unsupported name: " + name);
+		}
+
+		double result = calculateMean(type, inputData, length);
+		
+		output(name.replace("Sorted", "Median"), "double", result, 0, timestamp);
 	}
 }

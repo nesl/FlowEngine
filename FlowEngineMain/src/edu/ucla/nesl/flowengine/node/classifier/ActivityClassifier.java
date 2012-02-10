@@ -11,7 +11,7 @@ public class ActivityClassifier extends DataFlowNode {
 	private double mMean, mVariance;
 
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (name.contains("RMSGoertzel")) {
 			mPower = (double[])inputData;
 		} else if (name.contains("RMSVariance")) {

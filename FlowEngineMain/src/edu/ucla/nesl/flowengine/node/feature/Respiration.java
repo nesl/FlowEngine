@@ -8,17 +8,7 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class Respiration extends DataFlowNode {
 	private static final String TAG = Respiration.class.getSimpleName();
 	
-	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
-		if (length <= 0) {
-			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
-			return;
-		}
-		if (!type.equals("int[]")) {
-			throw new UnsupportedOperationException("Unsupported type: " + type);
-		}
-
-		int[] data = (int[])inputData;
+	private int[] calculateRespiration(int[] data, int length) {
 		int inhalation = 0, exhalation = 0;
 		
 		ArrayList<Integer> list = new ArrayList<Integer>();
@@ -52,6 +42,21 @@ public class Respiration extends DataFlowNode {
 
 		DebugHelper.dump(TAG, respiration);
 		
-		outputData(name + "Respiration", "int[]", respiration, respiration.length, timestamp);
+		return respiration;
+	}
+	
+	@Override
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("int[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+
+		int[] respiration = calculateRespiration((int[])inputData, length);
+		
+		output(name + "Respiration", "int[]", respiration, respiration.length, timestamp);
 	}
 }

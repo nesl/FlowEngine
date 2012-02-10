@@ -15,8 +15,33 @@ public class Stretch extends DataFlowNode {
 	private String mName;
 	private long mTimestamp;
 	
+	private int[] calculateStretch() {
+		ArrayList<Integer> list = new ArrayList<Integer>();
+
+		for(int i=0;i<mRPV.length-4;i+=4)
+		{
+			int valley1=mRPV[i];
+			int valley2=mRPV[i+4];
+			if (valley1 < 0 || valley2 < 0) {
+				continue;
+			}
+			int strch=getStretch(valley1,valley2);
+			list.add(new Integer(strch));
+		}
+		//converting the ArrayList to array
+		int stretches[]=new int[list.size()];
+		for(int j=0;j<list.size();j++)
+		{
+			stretches[j]=list.get(j).intValue();
+		}
+
+		DebugHelper.dump(TAG, stretches);
+		
+		return stretches;
+	}
+	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
@@ -35,31 +60,12 @@ public class Stretch extends DataFlowNode {
 		}
 		
 		if (mRPV != null && mRIP != null) {
-			ArrayList<Integer> list=new ArrayList<Integer>();
-
-			if(mRPV.length < 8)
-				outputData("Stretch", "int[]", EMPTY_INT_ARRAY, 0, mTimestamp);
-
-			for(int i=0;i<mRPV.length-4;i+=4)
-			{
-				int valley1=mRPV[i];
-				int valley2=mRPV[i+4];
-				if (valley1 < 0 || valley2 < 0) {
-					continue;
-				}
-				int strch=getStretch(valley1,valley2);
-				list.add(new Integer(strch));
+			if(mRPV.length < 8) {
+				output("Stretch", "int[]", EMPTY_INT_ARRAY, 0, mTimestamp);
+			} else {
+				int[] stretches = calculateStretch();
+				output(mName + "Stretch", "int[]", stretches, stretches.length, mTimestamp);
 			}
-			//converting the ArrayList to array
-			int stretches[]=new int[list.size()];
-			for(int j=0;j<list.size();j++)
-			{
-				stretches[j]=list.get(j).intValue();
-			}
-
-			DebugHelper.dump(TAG, stretches);
-
-			outputData(mName + "Stretch", "int[]", stretches, stretches.length, mTimestamp);
 			
 			mRPV = null;
 			mRIP = null;

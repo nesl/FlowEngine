@@ -99,7 +99,7 @@ public class StressClassifier extends DataFlowNode {
 	}
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (!type.equals("double")) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
@@ -161,7 +161,7 @@ public class StressClassifier extends DataFlowNode {
 		if (isAllFeature()) {
 			boolean isStress = getStressPredictionSVM(mFeatures);
 			DebugHelper.log(TAG, "isStress: " + isStress);
-			outputData("Stress", "boolean", isStress, 0, timestamp);
+			output("Stress", "boolean", isStress, 0, timestamp);
 			clearFeatureBitVector();
 		}
 	}

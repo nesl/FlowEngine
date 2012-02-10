@@ -9,8 +9,23 @@ public class RootMeanSquare extends DataFlowNode {
 	
 	public String mType = "double";
 	
+	private double calculateRootMeanSquare(double[] data) {
+		double rms = 0.0;
+
+		//Log.d(TAG, "inputData:" + Double.toString(data[0]) + ", " + Double.toString(data[1]) + ", " + Double.toString(data[2]));
+		
+		for (double value: data) { 
+			rms += Math.pow(value, 2.0);
+		}
+		rms = Math.sqrt(rms);
+		
+		//DebugHelper.log(TAG, "RMS: " + totalForce);
+
+		return rms;
+	}
+	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
@@ -19,18 +34,8 @@ public class RootMeanSquare extends DataFlowNode {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
-		double[] data = (double[])inputData;
-		double totalForce = 0.0;
-
-		//Log.d(TAG, "inputData:" + Double.toString(data[0]) + ", " + Double.toString(data[1]) + ", " + Double.toString(data[2]));
+		double rms = calculateRootMeanSquare((double[])inputData);
 		
-		for (double value: data) { 
-			totalForce += Math.pow(value, 2.0);
-		}
-		totalForce = Math.sqrt(totalForce);
-		
-		//DebugHelper.log(TAG, "RMS: " + totalForce);
-		
-		outputData(name + "RMS", "double", totalForce, 0, timestamp);
+		output(name + "RMS", "double", rms, 0, timestamp);
 	}
 }

@@ -8,18 +8,8 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Exhalation extends DataFlowNode {
 	private static final String TAG = Exhalation.class.getSimpleName();
-	
-	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
-		if (length <= 0) {
-			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
-			return;
-		}
-		if (!type.equals("int[]")) {
-			throw new UnsupportedOperationException("Unsupported type: " + type);
-		}
 
-		int[] data = (int[])inputData;
+	private int[] getExhalation(int[] data, int length) {
 		int valleyIndex=0,peakIndex=0;
 		
 		ArrayList<Integer> list=new ArrayList<Integer>();
@@ -52,8 +42,23 @@ public class Exhalation extends DataFlowNode {
 		}
 		
 		DebugHelper.dump(TAG, exhalation);
+
+		return exhalation;
+	}
+	
+	@Override
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("int[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
 		
-		outputData(name + "Exhalation", "int[]", exhalation, exhalation.length, timestamp);
+		int[] result = getExhalation((int[])inputData, length);
+		
+		output(name + "Exhalation", "int[]", result, result.length, timestamp);
 	}
 
 }

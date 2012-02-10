@@ -9,7 +9,7 @@ public class Sort extends DataFlowNode {
 	private static final String TAG = Sort.class.getSimpleName();
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
@@ -30,6 +30,6 @@ public class Sort extends DataFlowNode {
 		} else {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
-		outputData(name + "Sorted", type, mSorted, length, timestamp);
+		output(name + "Sorted", type, mSorted, length, timestamp);
 	}
 }

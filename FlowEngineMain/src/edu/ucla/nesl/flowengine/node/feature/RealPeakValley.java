@@ -59,20 +59,11 @@ public class RealPeakValley extends DataFlowNode {
 	 * @return real peaks and valleys as an integer array
 	 * @author Mahbub
 	 */
-	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
-		if (length <= 0) {
-			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
-			return;
-		}
-		if (!type.equals("int[]")) {
-			throw new UnsupportedOperationException("Unsupported type: " + type);
-		}
-
-		mPeakThreshold = mPercentile.getPercentile(PEAK_THRESHOLD_PERCENTILE);
+	private int[] calculateRealPeakValley(int[] data) {
+		mPeakThreshold = (Double)mPercentile.pull(PEAK_THRESHOLD_PERCENTILE);
 
 		mIndex=0;
-		int localMaxMin[] = getAllPeaknValley((int[])inputData);
+		int localMaxMin[] = getAllPeaknValley(data);
 		int realPeakValley[] = getRealPeaknValley(localMaxMin);
 		
 		if (realPeakValley.length == 0)
@@ -84,17 +75,32 @@ public class RealPeakValley extends DataFlowNode {
 			{
 				//adjust threshold for peaks
 				//should check data quality..........make sure that band is not loose
-				mPeakThreshold = mPercentile.getPercentile(FALLBACK_PEAK_THRESHOLD_PERCENTILE);
+				mPeakThreshold = (Double)mPercentile.pull(FALLBACK_PEAK_THRESHOLD_PERCENTILE);
 			}
 		}
 		else if (realPeakValley.length > NUM_TOO_MANY_PEAKS)	//too many real peaks, need to adjust the threshold to upper value; 5 is probable offset
 		{
-			mPeakThreshold = mPercentile.getPercentile(FALLBACK_PEAK_THRESHOLD_PERCENTILE);
+			mPeakThreshold = (Double)mPercentile.pull(FALLBACK_PEAK_THRESHOLD_PERCENTILE);
 		}
 		
 		DebugHelper.dump(TAG, realPeakValley);
+
+		return realPeakValley;
+	}
+	
+	@Override
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("int[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+
+		int[] realPeakValley = calculateRealPeakValley((int[])inputData);
 		
-		outputData(name + "RealPeakValley", "int[]", realPeakValley, realPeakValley.length, timestamp);
+		output(name + "RealPeakValley", "int[]", realPeakValley, realPeakValley.length, timestamp);
 	}
 	
 	/**

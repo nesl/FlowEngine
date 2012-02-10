@@ -11,12 +11,16 @@ public class SeedNode extends DataFlowNode {
 		mAttachedDevice = attachedDevice;
 	}
 
+	public Device getAttachedDevice() {
+		return mAttachedDevice;
+	}
+	
 	public void initializeGraph() {
 		super.initializeGraph(mSensorType, mAttachedDevice);
 	}
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
-		outputData(name, type, inputData, length, timestamp);
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
+		output(name, type, inputData, length, timestamp);
 	}
 }

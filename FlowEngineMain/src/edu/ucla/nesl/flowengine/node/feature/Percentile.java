@@ -9,16 +9,13 @@ public class Percentile extends DataFlowNode {
 	
 	private String mType;
 	private Object mSorted;
-	private double mPercentile = -1;
 
-	public Percentile() {
+	@Override
+	public Object pull(Object percentile) {
+		return getPercentile((Double)percentile);
 	}
 	
-	public Percentile(double percentile) {
-		mPercentile = percentile;
-	}
-	
-	public double getPercentile(double percentile) {
+	private double getPercentile(double percentile) {
 		if (mType == null || mSorted == null) {
 			InvalidDataReporter.report("Invalid mType(" + mType + ") or mSorted(" + mSorted + ")");
 			return 0.0;
@@ -76,7 +73,20 @@ public class Percentile extends DataFlowNode {
 	}
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	protected ResultData getParameterizedResult(Object parameter, String name, String type, Object outputData, int length, long timestamp) {
+		double percentile = (Double)parameter;
+		
+		if (percentile < 0.0) {
+			throw new IllegalArgumentException("Wrong percentile value: " + percentile);
+		}
+		double result = getPercentile(percentile);
+		
+		ResultData resultData = new ResultData(name.replace("Sorted", String.format("Percentile%.1f", percentile)), "double", result, 0, timestamp);
+		return resultData;
+	}
+	
+	@Override
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
@@ -88,9 +98,6 @@ public class Percentile extends DataFlowNode {
 		mType = type;
 		mSorted = inputData;
 		
-		if (mPercentile > 0.0) {
-			double result = getPercentile(mPercentile);
-			outputData(name.replace("Sorted", String.format("Percentile%.1f", mPercentile)), "double", result, 0, timestamp);
-		}
+		output(name, null, null, -1, timestamp); // nulls and -1 will be replaced by getParametizedResult()
 	}
 }

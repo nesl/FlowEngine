@@ -63,9 +63,9 @@ public class BufferNode extends DataFlowNode {
 	
 	private void outputData() {
 		if (mDataType.contains("[]") ) {
-			super.outputData(mDataName, mDataType, mBuffer, mBufferSize, mTimestamp);
+			super.output(mDataName, mDataType, mBuffer, mBufferSize, mTimestamp);
 		} else {
-			super.outputData(mDataName, mDataType + "[]", mBuffer, mBufferSize, mTimestamp);
+			super.output(mDataName, mDataType + "[]", mBuffer, mBufferSize, mTimestamp);
 		}
 		
 		mIndex = 0;
@@ -73,7 +73,7 @@ public class BufferNode extends DataFlowNode {
 	}
 
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (mBuffer == null || mDataType == null || mDataName == null) {
 			mDataName = name;
 			mDataType = type;

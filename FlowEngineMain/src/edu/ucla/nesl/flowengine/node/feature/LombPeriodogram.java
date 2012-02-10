@@ -16,7 +16,7 @@ public class LombPeriodogram extends DataFlowNode {
 	private Object mData = null;
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (name.contains("Mean")) {
 			if (!type.equals("double")) {
 				throw new UnsupportedOperationException("Unsupported type: " + type);
@@ -44,12 +44,12 @@ public class LombPeriodogram extends DataFlowNode {
 		}
 		
 		if (mIsMeanNew && mIsVarianceNew && mData != null) {
-			double[][] psd = calculate((int[])mData);
+			double[][] psd = calculateLombPeriodogram((int[])mData);
 			
 			DebugHelper.dump(TAG, psd[0]);
 			DebugHelper.dump(TAG, psd[1]);
 
-			outputData(mName + "LombPeriodogram", "double[][]", psd, psd.length, mTimestamp);
+			output(mName + "LombPeriodogram", "double[][]", psd, psd.length, mTimestamp);
 			
 			mIsMeanNew = false;
 			mIsVarianceNew = false;
@@ -57,7 +57,7 @@ public class LombPeriodogram extends DataFlowNode {
 		}
 	}
 
-	public double[][] calculate(int[] Rout) {	
+	public double[][] calculateLombPeriodogram(int[] Rout) {	
 		double[] t = new double[Rout.length];
 		double A,Asq,B,C,Csq,D;
 		double Ss2wt;

@@ -34,9 +34,19 @@ public class Goertzel extends DataFlowNode {
         }
         return s_prev2*s_prev2 + s_prev*s_prev - coeff*s_prev2*s_prev;
 	}
+
+	private void calculateSpectrum(double[] data) {
+		int i = 0;
+		for (double frequency = mStartFrequency; frequency <= mEndFrequency; frequency += mStepFrequency) {
+			mPowerSpectrum[i] = calculatePower(frequency, data);
+			i += 1;
+		}
+		
+		DebugHelper.dump(TAG, mPowerSpectrum);
+	}
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
@@ -45,15 +55,8 @@ public class Goertzel extends DataFlowNode {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
-		double[] data = (double[])inputData;
-		int i = 0;
-		for (double frequency = mStartFrequency; frequency <= mEndFrequency; frequency += mStepFrequency) {
-			mPowerSpectrum[i] = calculatePower(frequency, data);
-			i += 1;
-		}
+		calculateSpectrum((double[])inputData);
 		
-		DebugHelper.dump(TAG, mPowerSpectrum);
-		
-		outputData(name + "Goertzel", "double[]", mPowerSpectrum, mPowerSpectrum.length, timestamp);
+		output(name + "Goertzel", "double[]", mPowerSpectrum, mPowerSpectrum.length, timestamp);
 	}
 }

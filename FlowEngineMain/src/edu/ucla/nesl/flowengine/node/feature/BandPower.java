@@ -14,18 +14,9 @@ public class BandPower extends DataFlowNode {
 		mRangeLower = lower;
 		mRangeUpper = upper;
 	}
-	
-	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
-		if (length <= 0) {
-			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
-			return;
-		}
-		if (!type.equals("double[][]")) {
-			throw new UnsupportedOperationException("Unsupported type: " + type);
-		}
 
-		double [][] fP = (double[][])inputData;
+	private double getBandPower(double[][] data) {
+		double [][] fP = (double[][])data;
 		double[] P = fP[0];	
 		double[] f = fP[1];
 		double Padd = 0.0;
@@ -38,6 +29,21 @@ public class BandPower extends DataFlowNode {
 		
 		DebugHelper.log(TAG, "Padd: " + Padd);
 		
-		outputData(String.format(name + "BandPower%.1f-%.1f", mRangeLower, mRangeUpper), "double", Padd, 0, timestamp);
+		return Padd;
+	}
+	
+	@Override
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("double[][]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+
+		double result = getBandPower((double[][])inputData);
+		
+		output(String.format(name + "BandPower%.1f-%.1f", mRangeLower, mRangeUpper), "double", result, 0, timestamp);
 	}
 }

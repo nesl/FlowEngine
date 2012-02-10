@@ -12,17 +12,26 @@ public class QuartileDeviation extends DataFlowNode {
 	public QuartileDeviation(Percentile percentile) {
 		mPercentile = percentile;
 	}
+
+	private double calculateQuartileDeviation() {
+		double third = (Double)mPercentile.pull(75.0);
+		double first = (Double)mPercentile.pull(25.0);
+		double qd = (third - first) / 2.0;
+		
+		DebugHelper.log(TAG, "QD: " + qd);
+		
+		return qd;
+	}
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		double third = mPercentile.getPercentile(75.0);
-		double first = mPercentile.getPercentile(25.0);
-		double qd = (third - first) / 2.0; 
-		DebugHelper.log(TAG, "QD: " + qd);
-		outputData(name + "QuartileDeviation", "double", qd, 0, timestamp);
+		
+		double qd = calculateQuartileDeviation();
+		
+		output(name + "QuartileDeviation", "double", qd, 0, timestamp);
 	}
 }

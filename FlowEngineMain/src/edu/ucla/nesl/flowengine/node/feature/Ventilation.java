@@ -7,17 +7,7 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class Ventilation extends DataFlowNode {
 	private static final String TAG = Ventilation.class.getSimpleName();
 	
-	@Override
-	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
-		if (length <= 0) {
-			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
-			return;
-		}
-		if (!type.equals("int[]")) {
-			throw new UnsupportedOperationException("Unsupported type: " + type);
-		}
-
-		int[] data = (int[])inputData;
+	private double calculateVentilation(int[] data, int length) {
 		int temp = length;
 		double xx,yy;
 		double ventilation = 0;
@@ -54,6 +44,21 @@ public class Ventilation extends DataFlowNode {
 		
 		DebugHelper.log(TAG, String.format("ventilation: %.3f", ventilation));
 		
-		outputData(name + "Ventilation", "double", ventilation, 0, timestamp);
+		return ventilation;
+	}
+	
+	@Override
+	public void input(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("int[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+
+		double ventilation = calculateVentilation((int[])inputData, length);
+		
+		output(name + "Ventilation", "double", ventilation, 0, timestamp);
 	}
 }

@@ -349,7 +349,7 @@ public class ZephyrService extends Service implements Runnable {
 			mReceiveThread = new Thread(this);
 		}
 		
-		Log.d(TAG, "Trying to connect..");
+		Log.d(TAG, "Trying to connect to Zephyr..");
 		if (mSocket == null) {
 			while (!connect(mDeviceAddress)) {
 				Log.d(TAG, "Retrying..");

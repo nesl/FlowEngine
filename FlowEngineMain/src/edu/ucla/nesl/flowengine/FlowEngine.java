@@ -70,7 +70,7 @@ public class FlowEngine extends Service {
 			Bundle bundle = (Bundle)msg.obj;
 			int deviceID = bundle.getInt(BUNDLE_DEVICE_ID);
 			
-			if (seed.mAttachedDevice != deviceMap.get(deviceID)) {
+			if (seed.getAttachedDevice() != deviceMap.get(deviceID)) {
 				DebugHelper.log(TAG, "Unmatched seed node and attached device(sensor: " + msg.what + ", attempted device ID: " + deviceID);
 				return;
 			}
@@ -81,11 +81,11 @@ public class FlowEngine extends Service {
 			long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
 			
 			if (type.equals("double[]")) {
-				seed.inputData(name, type, bundle.getDoubleArray(BUNDLE_DATA), length, timestamp);	
+				seed.input(name, type, bundle.getDoubleArray(BUNDLE_DATA), length, timestamp);	
 			} else if (type.equals("int[]")) {
-				seed.inputData(name, type, bundle.getIntArray(BUNDLE_DATA), length, timestamp);
+				seed.input(name, type, bundle.getIntArray(BUNDLE_DATA), length, timestamp);
 			} else if (type.equals("int")) {
-				seed.inputData(name, type, bundle.getInt(BUNDLE_DATA), length, timestamp);
+				seed.input(name, type, bundle.getInt(BUNDLE_DATA), length, timestamp);
 			} else {
 				throw new IllegalArgumentException("Unknown data_type: " + type);
 			}
@@ -218,11 +218,11 @@ public class FlowEngine extends Service {
 		// Stress classifier
 		StressClassifier stress = new StressClassifier();
 		
-		final int RIP_SAMPLE_RATE = 18; // Hz
+		final int RIP_SAMPLE_RATE = 17; // Hz
 		final int RIP_BUFFER_DURATION = 60; // sec
 		
-		BufferNode ripBuffer = new BufferNode(1062);
-		//BufferNode ripBuffer = new BufferNode(RIP_SAMPLE_RATE * RIP_BUFFER_DURATION);
+		//BufferNode ripBuffer = new BufferNode(1062);
+		BufferNode ripBuffer = new BufferNode(RIP_SAMPLE_RATE * RIP_BUFFER_DURATION);
 		Sort ripSort = new Sort();
 		Percentile ripPercentile = new Percentile();
 		RealPeakValley rpv = new RealPeakValley(ripPercentile, RIP_SAMPLE_RATE, RIP_BUFFER_DURATION);
@@ -244,7 +244,7 @@ public class FlowEngine extends Service {
 		QuartileDeviation exhaleQD = new QuartileDeviation(exhalePercentile);
 		Sort stretchSort = new Sort();
 		Median stretchMedian = new Median();
-		Percentile stretchPercentile = new Percentile(80.0);
+		Percentile stretchPercentile = new Percentile();
 		QuartileDeviation stretchQD = new QuartileDeviation(stretchPercentile);
 		
 		rip.addOutputNode(ripBuffer);
@@ -284,12 +284,12 @@ public class FlowEngine extends Service {
 		
 		final int ECG_SAMPLE_RATE = 250; // Hz
 		final int ECG_BUFFER_DURATION = 60; // sec
-		BufferNode ecgBuffer = new BufferNode(14868);
-		//BufferNode ecgBuffer = new BufferNode(ECG_SAMPLE_RATE * ECG_BUFFER_DURATION);
+		//BufferNode ecgBuffer = new BufferNode(14868);
+		BufferNode ecgBuffer = new BufferNode(ECG_SAMPLE_RATE * ECG_BUFFER_DURATION);
 		RRInterval rrInterval = new RRInterval();
 		Sort rrSort = new Sort();
 		Median rrMedian = new Median();
-		Percentile rrPercentile = new Percentile(80.0);
+		Percentile rrPercentile = new Percentile();
 		QuartileDeviation rrQD = new QuartileDeviation(rrPercentile);
 		Mean rrMean = new Mean();
 		Variance rrVariance = new Variance();
@@ -319,10 +319,12 @@ public class FlowEngine extends Service {
 		inhaleMean.addOutputNode(stress);
 		exhaleQD.addOutputNode(stress);
 		stretchMedian.addOutputNode(stress);
-		stretchPercentile.addOutputNode(stress);
+		stretchPercentile.addOutPort("Percentile80.0", 80.0);
+		stretchPercentile.addOutputNode("Percentile80.0", stress);
 		stretchQD.addOutputNode(stress);
 		rrMedian.addOutputNode(stress);
-		rrPercentile.addOutputNode(stress);
+		rrPercentile.addOutPort("Percentile80.0", 80.0);
+		rrPercentile.addOutputNode("Percentile80.0", stress);
 		rrQD.addOutputNode(stress);
 		rrMean.addOutputNode(stress);
 		lombBandPower.addOutputNode(stress);
