@@ -1,6 +1,7 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Goertzel extends DataFlowNode {
@@ -35,7 +36,15 @@ public class Goertzel extends DataFlowNode {
 	}
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("double[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+
 		double[] data = (double[])inputData;
 		int i = 0;
 		for (double frequency = mStartFrequency; frequency <= mEndFrequency; frequency += mStepFrequency) {
@@ -45,6 +54,6 @@ public class Goertzel extends DataFlowNode {
 		
 		DebugHelper.dump(TAG, mPowerSpectrum);
 		
-		outputData(name + "Goertzel", "double[]", mPowerSpectrum, mPowerSpectrum.length);
+		outputData(name + "Goertzel", "double[]", mPowerSpectrum, mPowerSpectrum.length, timestamp);
 	}
 }

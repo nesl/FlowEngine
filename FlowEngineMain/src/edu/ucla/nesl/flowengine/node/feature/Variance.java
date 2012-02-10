@@ -1,6 +1,7 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Variance extends DataFlowNode {
@@ -11,17 +12,29 @@ public class Variance extends DataFlowNode {
 	
 	private String mName;
 	private String mType;
+	private long mTimestamp;
 	private Object mData = null;
 
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
 		if (name.contains("Mean")) {
+			if (!type.equals("double")) {
+				throw new UnsupportedOperationException("Unsupported type: " + type);
+			}
 			mMean = (Double)inputData;
 			mIsMeanNew = true;
 		} else {
+			if (length <= 0) {
+				InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+				return;
+			}
+			if (!type.equals("double[]") && !type.equals("int[]")) {
+				throw new UnsupportedOperationException("Unsupported type: " + type);
+			}
 			mData = inputData;
 			mType = type;
 			mName = name;
+			mTimestamp = timestamp;
 		} 
 		
 		if (mIsMeanNew && mData != null) {
@@ -43,7 +56,7 @@ public class Variance extends DataFlowNode {
 			
 			DebugHelper.log(TAG, "Variance: " + var);
 			
-			outputData(mName + "Variance", "double", var, 0);
+			outputData(mName + "Variance", "double", var, 0, mTimestamp);
 			
 			mIsMeanNew = false;
 			mData = null;

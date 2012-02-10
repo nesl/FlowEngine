@@ -1,14 +1,14 @@
 package edu.ucla.nesl.flowengine;
 
-public class SensorName {
+public class SensorType {
 	public static final int ACCELEROMETER = 1;
 	public static final int ECG = 2;
 	public static final int RIP = 3;
 	public static final int SKIN_TEMPERATURE = 4;
 
-	private SensorName() {}
+	private SensorType() {}
 
-	public static String getSensorNameString(int sensorName) {
+	public static String getSensorName(int sensorName) {
 		switch (sensorName) {
 		case ACCELEROMETER:
 			return "Accelerometer";
@@ -21,5 +21,4 @@ public class SensorName {
 		}
 		return "Unkown Sensor";
 	}
-	
 }

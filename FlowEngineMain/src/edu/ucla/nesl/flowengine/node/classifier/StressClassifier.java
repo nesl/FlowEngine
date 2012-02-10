@@ -99,14 +99,18 @@ public class StressClassifier extends DataFlowNode {
 	}
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+		if (!type.equals("double")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+		
 		mCurTime = System.currentTimeMillis();
 		double diff = mCurTime - mLastTime;
 		if (mFeatureBitVector != 0 && diff >= 10000) {
 			InvalidDataReporter.report("Too large time difference among features: " + diff);
 		}
 		mLastTime = mCurTime;
-		
+
 		if (name.contains("Ventilation")) {
 			mFeatures[INDEX_VENTILATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_VENTILATION;
@@ -157,7 +161,7 @@ public class StressClassifier extends DataFlowNode {
 		if (isAllFeature()) {
 			boolean isStress = getStressPredictionSVM(mFeatures);
 			DebugHelper.log(TAG, "isStress: " + isStress);
-			outputData("Stress", "boolean", isStress, 0);
+			outputData("Stress", "boolean", isStress, 0, timestamp);
 			clearFeatureBitVector();
 		}
 	}

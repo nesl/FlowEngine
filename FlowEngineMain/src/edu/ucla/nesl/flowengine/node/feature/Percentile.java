@@ -76,13 +76,12 @@ public class Percentile extends DataFlowNode {
 	}
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
-			//throw new IllegalArgumentException("Invalid length value: " + length);
-			InvalidDataReporter.report("length: " + length + " in " + TAG);
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!name.contains("Sorted")) {
+		if (!name.contains("Sorted") || !(type.equals("int[]") || type.equals("double[]"))) {
 			throw new UnsupportedOperationException("Unsupported name: " + name);
 		}
 		
@@ -91,7 +90,7 @@ public class Percentile extends DataFlowNode {
 		
 		if (mPercentile > 0.0) {
 			double result = getPercentile(mPercentile);
-			outputData(name.replace("Sorted", String.format("Percentile%.1f", mPercentile)), "double", result, 0);
+			outputData(name.replace("Sorted", String.format("Percentile%.1f", mPercentile)), "double", result, 0, timestamp);
 		}
 	}
 }

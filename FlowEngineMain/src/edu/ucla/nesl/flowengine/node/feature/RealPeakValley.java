@@ -60,7 +60,15 @@ public class RealPeakValley extends DataFlowNode {
 	 * @author Mahbub
 	 */
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("int[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+
 		mPeakThreshold = mPercentile.getPercentile(PEAK_THRESHOLD_PERCENTILE);
 
 		mIndex=0;
@@ -86,7 +94,7 @@ public class RealPeakValley extends DataFlowNode {
 		
 		DebugHelper.dump(TAG, realPeakValley);
 		
-		outputData(name + "RealPeakValley", "int[]", realPeakValley, realPeakValley.length);
+		outputData(name + "RealPeakValley", "int[]", realPeakValley, realPeakValley.length, timestamp);
 	}
 	
 	/**

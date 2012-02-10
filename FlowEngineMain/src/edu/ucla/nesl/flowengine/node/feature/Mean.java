@@ -1,13 +1,19 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Mean extends DataFlowNode {
 	private static final String TAG = Mean.class.getSimpleName();
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+
 		double mean = 0;
 		if (type.equals("int[]")) {
 			int[] data = (int[])inputData;
@@ -36,6 +42,6 @@ public class Mean extends DataFlowNode {
 		
 		DebugHelper.log(TAG, "Mean: " + mean);
 		
-		outputData(name + "Mean", "double", mean, 0);
+		outputData(name + "Mean", "double", mean, 0, timestamp);
 	}
 }

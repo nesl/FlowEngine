@@ -1,6 +1,7 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class RootMeanSquare extends DataFlowNode {
@@ -9,7 +10,15 @@ public class RootMeanSquare extends DataFlowNode {
 	public String mType = "double";
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("double[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+
 		double[] data = (double[])inputData;
 		double totalForce = 0.0;
 
@@ -22,6 +31,6 @@ public class RootMeanSquare extends DataFlowNode {
 		
 		//DebugHelper.log(TAG, "RMS: " + totalForce);
 		
-		outputData(name + "RMS", "double", totalForce, 0);
+		outputData(name + "RMS", "double", totalForce, 0, timestamp);
 	}
 }

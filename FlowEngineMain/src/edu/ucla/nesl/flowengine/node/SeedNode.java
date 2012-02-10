@@ -1,19 +1,22 @@
 package edu.ucla.nesl.flowengine.node;
 
-import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.Device;
+
 
 public class SeedNode extends DataFlowNode {
 	private static final String TAG = SeedNode.class.getSimpleName();
 	
-	public int mSeedName;
-	
-	public SeedNode(int seedName) {
-		mSeedName = seedName;
+	public SeedNode(int sensorType, Device attachedDevice) {
+		mSensorType = sensorType;
+		mAttachedDevice = attachedDevice;
 	}
 
+	public void initializeGraph() {
+		super.initializeGraph(mSensorType, mAttachedDevice);
+	}
+	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
-		//DebugHelper.log(TAG, String.format("mSeedName = %d, name = %s, type = %s", mSeedName, name, type));
-		outputData(name, type, inputData, length);
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+		outputData(name, type, inputData, length, timestamp);
 	}
 }

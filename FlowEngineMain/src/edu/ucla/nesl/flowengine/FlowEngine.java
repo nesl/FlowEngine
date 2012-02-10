@@ -1,6 +1,5 @@
 package edu.ucla.nesl.flowengine;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,8 +11,8 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Parcel;
 import android.os.RemoteException;
-import edu.ucla.nesl.flowengine.aidl.AbstractDeviceInterface;
-import edu.ucla.nesl.flowengine.aidl.FlowEngineDeviceAPI;
+import edu.ucla.nesl.flowengine.aidl.DeviceInterface;
+import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
 import edu.ucla.nesl.flowengine.node.BufferNode;
 import edu.ucla.nesl.flowengine.node.SeedNode;
 import edu.ucla.nesl.flowengine.node.classifier.ActivityClassifier;
@@ -44,39 +43,56 @@ public class FlowEngine extends Service {
 	private static final String BUNDLE_TYPE = "type";
 	private static final String BUNDLE_DATA = "data";
 	private static final String BUNDLE_LENGTH = "length";
+	private static final String BUNDLE_DEVICE_ID = "deviceID";
+	private static final String BUNDLE_TIMESTAMP = "timestamp";
 	
 	int mNextDeviceID = 1;
 	
 	private NotificationHelper notify;
-
-	private Map<Integer, AbstractDevice> deviceMap = new HashMap<Integer, AbstractDevice>();
-	private ArrayList<SeedNode> mSeedNodeList = new ArrayList<SeedNode>();
+	private boolean mIsGraphStarted = false;
+	
+	private Map<Integer, Device> deviceMap = new HashMap<Integer, Device>();
+	private Map<Integer, SeedNode> mSeedNodeMap = new HashMap<Integer, SeedNode>();
 	
 	private Handler mHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
 			//DebugHelper.log(TAG, String.format("Thread name: %s, msg.what: %d", Thread.currentThread().getName(), msg.what));
-			for (SeedNode seed: mSeedNodeList) {
-				if (seed.mSeedName == msg.what) {
-					Bundle bundle = (Bundle)msg.obj;
-					String type = bundle.getString(BUNDLE_TYPE);
-					int length = bundle.getInt(BUNDLE_LENGTH);
-					String name = SensorName.getSensorNameString(msg.what);
-					if (type.equals("double[]")) {
-						seed.inputData(name, type, bundle.getDoubleArray(BUNDLE_DATA), length);	
-					} else if (type.equals("int[]")) {
-						seed.inputData(name, type, bundle.getIntArray(BUNDLE_DATA), length);
-					} else if (type.equals("int")) {
-						seed.inputData(name, type, bundle.getInt(BUNDLE_DATA), length);
-					} else {
-						throw new IllegalArgumentException("Unknown data_type: " + type);
-					}
-				}
+			
+			if (!mIsGraphStarted)
+				return;
+			
+			SeedNode seed = mSeedNodeMap.get(msg.what);
+			if (seed == null) {
+				throw new UnsupportedOperationException("No SeedNode for SensorType: " + msg.what);
+			}
+			
+			Bundle bundle = (Bundle)msg.obj;
+			int deviceID = bundle.getInt(BUNDLE_DEVICE_ID);
+			
+			if (seed.mAttachedDevice != deviceMap.get(deviceID)) {
+				DebugHelper.log(TAG, "Unmatched seed node and attached device(sensor: " + msg.what + ", attempted device ID: " + deviceID);
+				return;
+			}
+			
+			String type = bundle.getString(BUNDLE_TYPE);
+			int length = bundle.getInt(BUNDLE_LENGTH);
+			String name = SensorType.getSensorName(msg.what);
+			long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
+			
+			if (type.equals("double[]")) {
+				seed.inputData(name, type, bundle.getDoubleArray(BUNDLE_DATA), length, timestamp);	
+			} else if (type.equals("int[]")) {
+				seed.inputData(name, type, bundle.getIntArray(BUNDLE_DATA), length, timestamp);
+			} else if (type.equals("int")) {
+				seed.inputData(name, type, bundle.getInt(BUNDLE_DATA), length, timestamp);
+			} else {
+				throw new IllegalArgumentException("Unknown data_type: " + type);
 			}
 		}
 	};
 	
-	private FlowEngineDeviceAPI.Stub deviceApiEndpoint = new FlowEngineDeviceAPI.Stub() {
+	private FlowEngineAPI.Stub deviceApiEndpoint = new FlowEngineAPI.Stub() {
 		// This override is very useful for debugging.
 		@Override
 		public boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
@@ -88,9 +104,9 @@ public class FlowEngine extends Service {
 		}
 		
 		@Override
-		public int addAbstractDevice(AbstractDeviceInterface adi) throws RemoteException {
+		public int addDevice(DeviceInterface deviceInterface) throws RemoteException {
 			synchronized(deviceMap) {
-				AbstractDevice device = new AbstractDevice(adi);
+				Device device = new Device(deviceInterface);
 				int deviceID = mNextDeviceID;
 				mNextDeviceID += 1;
 				deviceMap.put(deviceID, device);
@@ -100,40 +116,61 @@ public class FlowEngine extends Service {
 		}
 
 		@Override
-		public void removeAbstractDevice(int deviceID) throws RemoteException {
+		public void addSensor(int deviceID, int sensorType, int sampleInterval) throws RemoteException {
+			Device device = deviceMap.get(deviceID);
+			device.addSensor(sensorType, sampleInterval);
+			mSeedNodeMap.put(sensorType, new SeedNode(sensorType, device));
+			
+			if (!mIsGraphStarted 
+					&& mSeedNodeMap.get(SensorType.ACCELEROMETER) != null
+					&& mSeedNodeMap.get(SensorType.ECG) != null
+					&& mSeedNodeMap.get(SensorType.RIP) != null) {
+				configureGraph();
+				startGraph();
+			}
+		}
+
+		@Override
+		public void removeDevice(int deviceID) throws RemoteException {
 			synchronized(deviceMap) {
 				deviceMap.remove(deviceID);
 			}
 		}
 
 		@Override
-		public void pushDoubleArrayData(int seed_name, double[] data, int length) throws RemoteException {
+		public void pushDoubleArrayData(int deviceID, int sensor, double[] data, int length, long timestamp) throws RemoteException {
 			//DebugHelper.log(TAG, String.format("Thread name: %s", Thread.currentThread().getName()));
 			Bundle bundle = new Bundle();
+			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
 			bundle.putString(BUNDLE_TYPE, "double[]");
 			bundle.putDoubleArray(BUNDLE_DATA, data);
 			bundle.putInt(BUNDLE_LENGTH, length);
-			mHandler.sendMessage(mHandler.obtainMessage(seed_name, bundle));
+			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
+			mHandler.sendMessage(mHandler.obtainMessage(sensor, bundle));
 		}
 
 		@Override
-		public void pushIntData(int seed_name, int data, int length) throws RemoteException {
+		public void pushIntData(int deviceID, int sensor, int data, int length, long timestamp) throws RemoteException {
 			//DebugHelper.log(TAG, String.format("Thread name: %s", Thread.currentThread().getName()));
 			Bundle bundle = new Bundle();
+			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
 			bundle.putString(BUNDLE_TYPE, "int");
 			bundle.putInt(BUNDLE_DATA, data);
 			bundle.putInt(BUNDLE_LENGTH, length);
-			mHandler.sendMessage(mHandler.obtainMessage(seed_name, bundle));
+			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
+			mHandler.sendMessage(mHandler.obtainMessage(sensor, bundle));
 		}
 
 		@Override
-		public void pushIntArrayData(int seed_name, int[] data, int length) throws RemoteException {
+		public void pushIntArrayData(int deviceID, int sensor, int[] data, int length, long timestamp) throws RemoteException {
 			//DebugHelper.log(TAG, String.format("Thread name: %s", Thread.currentThread().getName()));
 			Bundle bundle = new Bundle();
+			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
 			bundle.putString(BUNDLE_TYPE, "int[]");
 			bundle.putIntArray(BUNDLE_DATA, data);
 			bundle.putInt(BUNDLE_LENGTH, length);
-			mHandler.sendMessage(mHandler.obtainMessage(seed_name, bundle));
+			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
+			mHandler.sendMessage(mHandler.obtainMessage(sensor, bundle));
 		}
 	};
 
@@ -147,16 +184,18 @@ public class FlowEngine extends Service {
 		}
 	}
 
+	private void startGraph() {
+		mIsGraphStarted = true;
+	}
+	
+	private void stopGraph() {
+		mIsGraphStarted = false;
+	}
+	
 	private void configureGraph() {
-		//TODO: seed node need to be initialized when device services are attached.
-		SeedNode accelerometer = new SeedNode(SensorName.ACCELEROMETER);
-		SeedNode ecg = new SeedNode(SensorName.ECG);
-		SeedNode rip = new SeedNode(SensorName.RIP);
-		//SeedNode skintemp = new SeedNode(SensorName.SKIN_TEMPERATURE);
-		mSeedNodeList.add(accelerometer);
-		mSeedNodeList.add(ecg);
-		mSeedNodeList.add(rip);
-		//mSeedNodeList.add(skintemp);
+		SeedNode accelerometer = mSeedNodeMap.get(SensorType.ACCELEROMETER);
+		SeedNode ecg = mSeedNodeMap.get(SensorType.ECG);
+		SeedNode rip = mSeedNodeMap.get(SensorType.RIP);
 
 		// Activity classifier
 		RootMeanSquare rms = new RootMeanSquare();
@@ -182,7 +221,8 @@ public class FlowEngine extends Service {
 		final int RIP_SAMPLE_RATE = 18; // Hz
 		final int RIP_BUFFER_DURATION = 60; // sec
 		
-		BufferNode ripBuffer = new BufferNode(RIP_SAMPLE_RATE * RIP_BUFFER_DURATION);
+		BufferNode ripBuffer = new BufferNode(1062);
+		//BufferNode ripBuffer = new BufferNode(RIP_SAMPLE_RATE * RIP_BUFFER_DURATION);
 		Sort ripSort = new Sort();
 		Percentile ripPercentile = new Percentile();
 		RealPeakValley rpv = new RealPeakValley(ripPercentile, RIP_SAMPLE_RATE, RIP_BUFFER_DURATION);
@@ -244,7 +284,8 @@ public class FlowEngine extends Service {
 		
 		final int ECG_SAMPLE_RATE = 250; // Hz
 		final int ECG_BUFFER_DURATION = 60; // sec
-		BufferNode ecgBuffer = new BufferNode(ECG_SAMPLE_RATE * ECG_BUFFER_DURATION);
+		BufferNode ecgBuffer = new BufferNode(14868);
+		//BufferNode ecgBuffer = new BufferNode(ECG_SAMPLE_RATE * ECG_BUFFER_DURATION);
 		RRInterval rrInterval = new RRInterval();
 		Sort rrSort = new Sort();
 		Median rrMedian = new Median();
@@ -285,6 +326,13 @@ public class FlowEngine extends Service {
 		rrQD.addOutputNode(stress);
 		rrMean.addOutputNode(stress);
 		lombBandPower.addOutputNode(stress);
+
+		ecgBuffer.addSyncedBufferNode(ripBuffer);
+		ripBuffer.addSyncedBufferNode(ecgBuffer);
+		
+		accelerometer.initializeGraph();
+		ecg.initializeGraph();
+		rip.initializeGraph();
 	}
 	
 	@Override
@@ -295,8 +343,6 @@ public class FlowEngine extends Service {
 		
 		notify = new NotificationHelper(this, this.getClass().getSimpleName(), this.getClass().getName(), R.drawable.ic_launcher);
 		
-		configureGraph();
-		
 		DebugHelper.logi(TAG, "Service creating");
 	}
 	
@@ -306,9 +352,9 @@ public class FlowEngine extends Service {
 		
 		DebugHelper.logi(TAG, "Service destroying");
 		
-		for (Map.Entry<Integer, AbstractDevice> entry : deviceMap.entrySet()) {
+		for (Map.Entry<Integer, Device> entry : deviceMap.entrySet()) {
 			try {
-				entry.getValue().adi.kill();
+				entry.getValue().getInterface().kill();
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}

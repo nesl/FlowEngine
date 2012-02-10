@@ -3,6 +3,7 @@ package edu.ucla.nesl.flowengine.node.feature;
 import java.util.Arrays;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class RRInterval extends DataFlowNode {
@@ -13,7 +14,15 @@ public class RRInterval extends DataFlowNode {
 	private int[] RR = new int[256];
 
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("int[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+
 		int[] databuffer = (int[])inputData;
 		
 		int[] tbody = lowpass(databuffer);
@@ -30,7 +39,7 @@ public class RRInterval extends DataFlowNode {
 
 		DebugHelper.dump(TAG, return_RR);
 		
-		outputData(name + "RRInterval", "int[]", return_RR, return_RR.length);
+		outputData(name + "RRInterval", "int[]", return_RR, return_RR.length, timestamp);
 	}
 	
 	private int[] findpks(int[] tlpbody02) {

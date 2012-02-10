@@ -3,6 +3,7 @@ package edu.ucla.nesl.flowengine.node.feature;
 import java.util.ArrayList;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Stretch extends DataFlowNode {
@@ -12,14 +13,23 @@ public class Stretch extends DataFlowNode {
 	private int[] mRPV = null;
 	private int[] mRIP = null;
 	private String mName;
+	private long mTimestamp;
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("int[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
 		if (name.contains("RIPRealPeakValley")) {
 			mRPV = (int[])inputData;
 		} else if (name.contains("RIP")) {
 			mRIP = (int[])inputData;
 			mName = name;
+			mTimestamp = timestamp;
 		} else {
 			throw new UnsupportedOperationException("Unsupported name: " + name);
 		}
@@ -28,12 +38,15 @@ public class Stretch extends DataFlowNode {
 			ArrayList<Integer> list=new ArrayList<Integer>();
 
 			if(mRPV.length < 8)
-				outputData("Stretch", "int[]", EMPTY_INT_ARRAY, 0);
+				outputData("Stretch", "int[]", EMPTY_INT_ARRAY, 0, mTimestamp);
 
 			for(int i=0;i<mRPV.length-4;i+=4)
 			{
 				int valley1=mRPV[i];
 				int valley2=mRPV[i+4];
+				if (valley1 < 0 || valley2 < 0) {
+					continue;
+				}
 				int strch=getStretch(valley1,valley2);
 				list.add(new Integer(strch));
 			}
@@ -46,7 +59,7 @@ public class Stretch extends DataFlowNode {
 
 			DebugHelper.dump(TAG, stretches);
 
-			outputData(mName + "Stretch", "int[]", stretches, stretches.length);
+			outputData(mName + "Stretch", "int[]", stretches, stretches.length, mTimestamp);
 			
 			mRPV = null;
 			mRIP = null;
@@ -59,7 +72,7 @@ public class Stretch extends DataFlowNode {
 			return 0;
 		int stretch=0;
 		//to avoid negetive array allocation exception......need to check why it happens sometimes
-		if(index2<index1)
+		if(index2 < index1)
 		{
 			int temp=index1;
 			index1=index2;

@@ -8,11 +8,13 @@ public class Median extends DataFlowNode {
 	private static final String TAG = Median.class.getSimpleName();
 
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
-			//throw new IllegalArgumentException("length: " + length);
-			InvalidDataReporter.report("length: " + length + " in " + TAG);
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
+		}
+		if (!name.contains("Sorted")) {
+			throw new UnsupportedOperationException("Unsupported name: " + name);
 		}
 		
 		double result;
@@ -43,6 +45,6 @@ public class Median extends DataFlowNode {
 		
 		DebugHelper.log(TAG, "Median: " + result);
 		
-		outputData(name.replace("Sorted", "Median"), "double", result, 0);
+		outputData(name.replace("Sorted", "Median"), "double", result, 0, timestamp);
 	}
 }

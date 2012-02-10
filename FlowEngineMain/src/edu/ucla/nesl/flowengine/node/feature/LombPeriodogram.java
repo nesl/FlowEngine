@@ -1,6 +1,7 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class LombPeriodogram extends DataFlowNode {
@@ -11,20 +12,35 @@ public class LombPeriodogram extends DataFlowNode {
 	
 	private String mName;
 	private String mType;
+	private long mTimestamp;
 	private Object mData = null;
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
 		if (name.contains("Mean")) {
+			if (!type.equals("double")) {
+				throw new UnsupportedOperationException("Unsupported type: " + type);
+			}
 			mIsMeanNew = true;
 			mMean = (Double)inputData;
 		} else if (name.contains("Variance")) {
+			if (!type.equals("double")) {
+				throw new UnsupportedOperationException("Unsupported type: " + type);
+			}
 			mIsVarianceNew = true;
 			mVariance = (Double)inputData;
 		} else {
+			if (length <= 0) {
+				InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+				return;
+			}
+			if (!type.equals("int[]")) {
+				throw new UnsupportedOperationException("Unsupported type: " + type);
+			}
 			mName = name;
 			mType = type;
 			mData = inputData;
+			mTimestamp = timestamp;
 		}
 		
 		if (mIsMeanNew && mIsVarianceNew && mData != null) {
@@ -33,7 +49,7 @@ public class LombPeriodogram extends DataFlowNode {
 			DebugHelper.dump(TAG, psd[0]);
 			DebugHelper.dump(TAG, psd[1]);
 
-			outputData(mName + "LombPeriodogram", "double[][]", psd, psd.length);
+			outputData(mName + "LombPeriodogram", "double[][]", psd, psd.length, mTimestamp);
 			
 			mIsMeanNew = false;
 			mIsVarianceNew = false;

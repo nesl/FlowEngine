@@ -3,13 +3,22 @@ package edu.ucla.nesl.flowengine.node.feature;
 import java.util.ArrayList;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Inhalation extends DataFlowNode {
 	private static final String TAG = Inhalation.class.getSimpleName();
 	
 	@Override
-	public void inputData(String name, String type, Object inputData, int length) {
+	public void inputData(String name, String type, Object inputData, int length, long timestamp) {
+		if (length <= 0) {
+			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
+			return;
+		}
+		if (!type.equals("int[]")) {
+			throw new UnsupportedOperationException("Unsupported type: " + type);
+		}
+
 		int[] data = (int[])inputData;
 		int valleyIndex=0,peakIndex=0;
 		
@@ -47,7 +56,7 @@ public class Inhalation extends DataFlowNode {
 		
 		DebugHelper.dump(TAG, inhalation);
 		
-		outputData(name + "Inhalation", "int[]", inhalation, inhalation.length);
+		outputData(name + "Inhalation", "int[]", inhalation, inhalation.length, timestamp);
 	}
 
 }

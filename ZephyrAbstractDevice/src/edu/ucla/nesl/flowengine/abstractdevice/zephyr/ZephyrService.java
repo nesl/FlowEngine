@@ -17,9 +17,9 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
-import edu.ucla.nesl.flowengine.SensorName;
-import edu.ucla.nesl.flowengine.aidl.AbstractDeviceInterface;
-import edu.ucla.nesl.flowengine.aidl.FlowEngineDeviceAPI;
+import edu.ucla.nesl.flowengine.SensorType;
+import edu.ucla.nesl.flowengine.aidl.DeviceInterface;
+import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
 
 public class ZephyrService extends Service implements Runnable {
 	private static final String TAG = ZephyrService.class.getSimpleName();
@@ -30,7 +30,7 @@ public class ZephyrService extends Service implements Runnable {
 	private static final int MSG_START = 2;
 	private static final int MSG_KILL = 3;
 	
-	private FlowEngineDeviceAPI mAPI;
+	private FlowEngineAPI mAPI;
 	private int	mDeviceID;
 	private ZephyrService mThisService = this;
 
@@ -66,7 +66,7 @@ public class ZephyrService extends Service implements Runnable {
 			// until it succeeds or throws an exception
 			mSocket.connect();
 		} catch (IOException e) {
-			Log.e(TAG, "Failed to connect to " + deviceAddress);
+			Log.d(TAG, "Failed to connect to " + deviceAddress);
 			e.printStackTrace();
 			try {
 				mSocket.close();
@@ -133,6 +133,11 @@ public class ZephyrService extends Service implements Runnable {
 		return hex.toString();
 	}*/
 
+	private double convertADCtoG(int sample) {
+		// 10bits ADC 0 ~ 1023 = -16g ~ 16g
+		return (sample / 1023.0) * 32.0 - 16.0;
+	}
+	
 	@Override
 	public void run() {
 		final byte STX = 2;
@@ -159,15 +164,28 @@ public class ZephyrService extends Service implements Runnable {
 	    		// parsing receivedBytes
 	    		if (msgID == 0x20) {
 	    			//Log.d(TAG, "Received General Data Packet");
+	    			long timestamp = 0;
+	    			for (int i=8, j=0; i<12; i++, j+=8) {
+	    				timestamp |= (receivedBytes[i]&0xFF) << j;
+	    			}
+	    			//Log.d(TAG, "timestamp: " + timestamp);
+	    			//int heartRate = (receivedBytes[12]&0xFF) | ((receivedBytes[13]&0xFF)<<8);
+	    			//int respirationRate = (receivedBytes[14]&0xFF) | ((receivedBytes[15]&0xFF)<<8);
 	    			int skinTemp = (receivedBytes[16]&0xFF) | ((receivedBytes[17]&0xFF)<<8);
 	    			try {
-						mAPI.pushIntData(SensorName.SKIN_TEMPERATURE, skinTemp, 0);
+	    				//sample interval: 1s
+						mAPI.pushIntData(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, 0, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
+						startFlowEngineService();
 					}
 	    		} else if (msgID == 0x21) {
 	    			//Log.d(TAG, "Received Breathing Waveform Packet");
 	    			int[] breathingData = new int[18];
+	    			long timestamp = 0;
+	    			for (int i=8, j=0; i<12; i++, j+=8) {
+	    				timestamp |= (receivedBytes[i]&0xFF) << j;
+	    			}
 	    			for (int i=12, j=0; i<35; i+=5)	{
 	    				breathingData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
 	    				if (i+2 < 35)
@@ -178,12 +196,19 @@ public class ZephyrService extends Service implements Runnable {
 	    					breathingData[j++] = ((receivedBytes[i+3]&0xFF)>>6) | ((receivedBytes[i+4]&0xFF) << 2);
 	    			}
 	    			try {
-						mAPI.pushIntArrayData(SensorName.RIP, breathingData, breathingData.length);
+	    				// sample interval: 56ms
+						mAPI.pushIntArrayData(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
+						startFlowEngineService();
 					}
 	    		} else if (msgID == 0x22) {
 	    			//Log.d(TAG, "Received ECG Waveform Packet");
+	    			long timestamp = 0;
+	    			for (int i=8, j=0; i<12; i++, j+=8) {
+	    				timestamp |= (receivedBytes[i]&0xFF) << j;
+	    			}
+	    			//Log.d(TAG, "timestamp: " + timestamp);
 	    			int[] ecgData = new int[63];
 	    			for (int i=12, j=0; i<91; i+=5) {
 	    				ecgData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
@@ -201,14 +226,19 @@ public class ZephyrService extends Service implements Runnable {
 	    			//Log.d(TAG, "ECG Data: " + dump);
 	    			
 	    			try {
-						mAPI.pushIntArrayData(SensorName.ECG, ecgData, ecgData.length);
+	    				// sample iterval: 4ms
+						mAPI.pushIntArrayData(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
+						startFlowEngineService();
 					}
 	    		} else if (msgID == 0x25) {
 	    			//Log.d(TAG, "Received Accelerometer Packet");
 	    			int[] accData = new int[60];
-	    			
+	    			long timestamp = 0;
+	    			for (int i=8, j=0; i<12; i++, j+=8) {
+	    				timestamp |= (receivedBytes[i]&0xFF) << j;
+	    			}
 	    			for (int i=12, j=0; i<87; i+=5) {
 	    				accData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
 	    				if (i+2 < 87)
@@ -227,15 +257,19 @@ public class ZephyrService extends Service implements Runnable {
 	    				j+=1;
 	    			}*/
 	    			
+	    			//Log.d(TAG, "timestamp: " + timestamp);
 	    			double[] accSample = new double[3];
-	    			for (int i = 0; i < accData.length; i += 3) {
-	    				accSample[0] = accData[i];
-	    				accSample[1] = accData[i+1];
-	    				accSample[2] = accData[i+2];
+	    			for (int i = 0, j = 0; i < accData.length; i += 3, j++) {
+	    				accSample[0] = convertADCtoG(accData[i]);
+	    				accSample[1] = convertADCtoG(accData[i+1]);
+	    				accSample[2] = convertADCtoG(accData[i+2]);
+	    				//Log.d(TAG, "Acc: " + accSample[0] + ", " + accSample[1] + ", " + accSample[2]);
 		    			try {
-							mAPI.pushDoubleArrayData(SensorName.ACCELEROMETER, accSample, accSample.length);
+		    				// sample interval: 20ms
+							mAPI.pushDoubleArrayData(mDeviceID, SensorType.ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
 						} catch (RemoteException e) {
 							e.printStackTrace();
+							startFlowEngineService();
 						}
 	    			}
 	    		} else if (msgID == 0x23 ) {
@@ -273,11 +307,16 @@ public class ZephyrService extends Service implements Runnable {
 					mSocket = null;
 					break;
 				}
-				Log.d(TAG, "재접속시도 1..");
+				Log.d(TAG, "Trying to reconnect(1)..");
 				int numRetries = 2;
-				while (!connect(mDeviceAddress)) {
-					Log.d(TAG, "재접속시도 " + numRetries + "..");
+				while (!mIsStopRequest && !connect(mDeviceAddress)) {
+					Log.d(TAG, "Trying to reconnect(" + numRetries + ")..");
 					numRetries += 1;
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
 				}
     		}
 		} // end while
@@ -322,6 +361,8 @@ public class ZephyrService extends Service implements Runnable {
 			}
 			Log.d(TAG, "Start receiving thread..");
 			mReceiveThread.start();
+		} else {
+			Log.d(TAG, "Already connected to Zephyr.");
 		}
 	}
 	
@@ -348,7 +389,7 @@ public class ZephyrService extends Service implements Runnable {
 		}
 	};
 	
-	private AbstractDeviceInterface.Stub mZephyrDeviceInterface = new AbstractDeviceInterface.Stub() {
+	private DeviceInterface.Stub mZephyrDeviceInterface = new DeviceInterface.Stub() {
 		@Override
 		public void start() throws RemoteException {
 			mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP));
@@ -368,12 +409,17 @@ public class ZephyrService extends Service implements Runnable {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
 			Log.i(TAG, "Service connection established.");
-			mAPI = FlowEngineDeviceAPI.Stub.asInterface(service);
+			mAPI = FlowEngineAPI.Stub.asInterface(service);
 			try {
-				mDeviceID = mAPI.addAbstractDevice(mZephyrDeviceInterface);
+				mDeviceID = mAPI.addDevice(mZephyrDeviceInterface);
+				mAPI.addSensor(mDeviceID, SensorType.ACCELEROMETER, 20);
+				mAPI.addSensor(mDeviceID, SensorType.ECG, 4);
+				mAPI.addSensor(mDeviceID, SensorType.RIP, 56);
+				mAPI.addSensor(mDeviceID, SensorType.SKIN_TEMPERATURE, 1000);
 				mThisService.start();
 			} catch (RemoteException e) {
 				Log.e(TAG, "Failed to add AbstractDevice..", e);
+				startFlowEngineService();
 			}
 		}
 
@@ -389,17 +435,41 @@ public class ZephyrService extends Service implements Runnable {
 		return null;
 	}
 
+	private void startFlowEngineService() {
+        // Start FlowEngine service if it's not running.
+		Log.d(TAG, "Starting FlowEngineService..");
+		Intent intent = new Intent(FlowEngineServiceName);
+
+		int numRetries = 1;
+		while (startService(intent) == null) {
+			Log.d(TAG, "Retrying to start FlowEngineService.. (" + numRetries + ")");
+			numRetries++;
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		// Bind to the FlowEngine service.
+		Log.d(TAG, "Binding to FlowEngineService..");
+		numRetries = 1;
+		while (!bindService(intent, mServiceConnection, 0)) {
+			Log.d(TAG, "Retrying to bind to FlowEngineService.. (" + numRetries + ")");
+			numRetries++;
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		Log.i(TAG, "Service creating");
-
-        // Start FlowEngine service if it's not running.
-		Intent intent = new Intent(FlowEngineServiceName);
-		startService(intent);
-		
-		// Bind to the FlowEngine service.
-		bindService(intent, mServiceConnection, 0);
+		startFlowEngineService();
 	}
 	
 	@Override
@@ -409,7 +479,7 @@ public class ZephyrService extends Service implements Runnable {
 		stop();
 		
 		try {
-			mAPI.removeAbstractDevice(mDeviceID);
+			mAPI.removeDevice(mDeviceID);
 			unbindService(mServiceConnection);
 		} catch (Throwable t) {
 			Log.w(TAG, "Failed to unbind from the service", t);
