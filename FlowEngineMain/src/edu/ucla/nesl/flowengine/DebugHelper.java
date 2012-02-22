@@ -10,7 +10,7 @@ public class DebugHelper {
 	private static final String TAG = DebugHelper.class.getSimpleName();
 	
 	public static boolean isMethodTrace = false;
-	public static boolean isAllocCounting = true;
+	public static boolean isAllocCounting = false;
 	public static int traceSize = 150000000;
 	
 	public static Object lock = new Object();
@@ -18,7 +18,7 @@ public class DebugHelper {
 	public static int conversationCount = 0;
 	public static int numCount = 5;
 	
-	private static boolean mIsLogging = false;
+	private static boolean mIsLogging = true;
 	
 	private static Random rand = new Random(System.currentTimeMillis());
 	

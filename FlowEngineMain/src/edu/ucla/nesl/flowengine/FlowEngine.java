@@ -241,17 +241,17 @@ public class FlowEngine extends Service {
 		
 		Sort respirationSort = new Sort();
 		Percentile respirationPercentile = new Percentile();
-		QuartileDeviation respirationQD = new QuartileDeviation(respirationPercentile);
+		QuartileDeviation respirationQD = new QuartileDeviation();
 		Sort ieRatioSort = new Sort();
 		Median ieRatioMedian = new Median();
 		Mean inhaleMean = new Mean();
 		Sort exhaleSort = new Sort();
 		Percentile exhalePercentile = new Percentile();
-		QuartileDeviation exhaleQD = new QuartileDeviation(exhalePercentile);
+		QuartileDeviation exhaleQD = new QuartileDeviation();
 		Sort stretchSort = new Sort();
 		Median stretchMedian = new Median();
 		Percentile stretchPercentile = new Percentile();
-		QuartileDeviation stretchQD = new QuartileDeviation(stretchPercentile);
+		QuartileDeviation stretchQD = new QuartileDeviation();
 		
 		rip.addOutputNode(ripBuffer);
 		
@@ -261,6 +261,7 @@ public class FlowEngine extends Service {
 
 		ripBuffer.addOutputNode(stretch);
 		ripSort.addOutputNode(ripPercentile);
+		
 		rpv.addOutputNode(respiration);
 		rpv.addOutputNode(ieratio);
 		rpv.addOutputNode(inhalation);
@@ -268,25 +269,32 @@ public class FlowEngine extends Service {
 		rpv.addOutputNode(ventilation);
 		rpv.addOutputNode(stretch);
 		
-		// order is important: QD pulls Percentile
 		respiration.addOutputNode(respirationSort);
-		respiration.addOutputNode(respirationQD);
 		respirationSort.addOutputNode(respirationPercentile);
+		respirationPercentile.addOutPort("Percentile75.0", 75.0);
+		respirationPercentile.addOutPort("Percentile25.0", 25.0);
+		respirationPercentile.addOutputNode("Percentile75.0", respirationQD);
+		respirationPercentile.addOutputNode("Percentile25.0", respirationQD);
 
 		ieratio.addOutputNode(ieRatioSort);
 		ieRatioSort.addOutputNode(ieRatioMedian);
 		inhalation.addOutputNode(inhaleMean);
 		
-		// order is important: QD pulls Percetile
 		exhalation.addOutputNode(exhaleSort);
-		exhalation.addOutputNode(exhaleQD);
 		exhaleSort.addOutputNode(exhalePercentile);
 
-		stretch.addOutputNode(stretchSort);
-		stretch.addOutputNode(stretchQD);
+		exhalePercentile.addOutPort("Percentile75.0", 75.0);
+		exhalePercentile.addOutPort("Percentile25.0", 25.0);
+		exhalePercentile.addOutputNode("Percentile75.0", exhaleQD);
+		exhalePercentile.addOutputNode("Percentile25.0", exhaleQD);
 		
-		stretchSort.addOutputNode(stretchPercentile);
+		stretch.addOutputNode(stretchSort);
 		stretchSort.addOutputNode(stretchMedian);
+		stretchSort.addOutputNode(stretchPercentile);
+		stretchPercentile.addOutPort("Percentile75.0", 75.0);
+		stretchPercentile.addOutPort("Percentile25.0", 25.0);
+		stretchPercentile.addOutputNode("Percentile75.0", stretchQD);
+		stretchPercentile.addOutputNode("Percentile25.0", stretchQD);
 		
 		// ECG sample interval = 4ms
 		final int ECG_SAMPLE_RATE = 250; // Hz
@@ -297,7 +305,7 @@ public class FlowEngine extends Service {
 		Sort rrSort = new Sort();
 		Median rrMedian = new Median();
 		Percentile rrPercentile = new Percentile();
-		QuartileDeviation rrQD = new QuartileDeviation(rrPercentile);
+		QuartileDeviation rrQD = new QuartileDeviation();
 		Mean rrMean = new Mean();
 		Variance rrVariance = new Variance();
 		LombPeriodogram lomb = new LombPeriodogram();
@@ -308,13 +316,16 @@ public class FlowEngine extends Service {
 		
 		// order is important here.
 		rrInterval.addOutputNode(rrSort);
-		rrInterval.addOutputNode(rrQD);
 		
 		rrInterval.addOutputNode(lomb);
 		rrInterval.addOutputNode(rrMean);
 		rrInterval.addOutputNode(rrVariance);
 		rrSort.addOutputNode(rrMedian);
 		rrSort.addOutputNode(rrPercentile);
+		rrPercentile.addOutPort("Percentile75.0", 75.0);
+		rrPercentile.addOutPort("Percentile25.0", 25.0);
+		rrPercentile.addOutputNode("Percentile75.0", rrQD);
+		rrPercentile.addOutputNode("Percentile25.0", rrQD);
 		rrMean.addOutputNode(rrVariance);
 		rrMean.addOutputNode(lomb);
 		rrVariance.addOutputNode(lomb);
