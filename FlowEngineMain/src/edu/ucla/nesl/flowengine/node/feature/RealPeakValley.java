@@ -109,7 +109,7 @@ public class RealPeakValley extends DataFlowNode {
 	 * @return list of tuple containing (valleyIndex, valley, peakIndex, peak). so if any method wants to use this method, it should read all the four values together.
 	 * @author Mahbub
 	 */
-	public int[] getAllPeaknValley(int[] data)					//consider the timestamp issues. because it is important
+	private int[] getAllPeaknValley(int[] data)					//consider the timestamp issues. because it is important
 	{
 		int prev_value1=0;
 		int curr_value=0;
@@ -172,7 +172,7 @@ public class RealPeakValley extends DataFlowNode {
 		}
 		return peakValleys;
 	}
-	public ArrayList<Integer> addToTheList(ArrayList<Integer> list,int anchorIndex, int anchorValue)
+	private ArrayList<Integer> addToTheList(ArrayList<Integer> list,int anchorIndex, int anchorValue)
 	{
 		Integer val=new Integer(anchorValue);
 		Integer ind=new Integer(anchorIndex);
@@ -186,7 +186,7 @@ public class RealPeakValley extends DataFlowNode {
 	 * @return list of tuple containing (valleyIndex, valley, peakIndex, peak). so if any method wants to use this method, it should read all the four values together.
 	 * @author Mahbub
 	 */
-	public int[] getRealPeaknValley(int[] data)			//check whether it is multiple of four....if not then discard the last part which does not fit to
+	private int[] getRealPeaknValley(int[] data)			//check whether it is multiple of four....if not then discard the last part which does not fit to
 	{
 
 		boolean isStarting=true;
@@ -491,7 +491,7 @@ public class RealPeakValley extends DataFlowNode {
 	 * @return valleyAnchor Index
 	 */
 			
-	public int getValleyAnchorIndexBelowThreshold(int data[],int startIndex, int prevRealPeak)
+	private int getValleyAnchorIndexBelowThreshold(int data[],int startIndex, int prevRealPeak)
 	{
 		int prevRealPeakIndex=0;
 		if(prevRealPeak==-1)
@@ -518,7 +518,7 @@ public class RealPeakValley extends DataFlowNode {
 	 * @param list
 	 * @return
 	 */
-	public ArrayList<Integer> postProcessing(ArrayList<Integer> list)
+	private ArrayList<Integer> postProcessing(ArrayList<Integer> list)
 	{
 		if(list.size()<8) //at least two peaks required for this processing
 			return list;

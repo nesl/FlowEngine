@@ -10,5 +10,4 @@ public class BootReceiver extends BroadcastReceiver {
 	public void onReceive(Context context, Intent intent) {
 		context.startService(new Intent(FlowEngine.class.getName()));
 	}
-
 }

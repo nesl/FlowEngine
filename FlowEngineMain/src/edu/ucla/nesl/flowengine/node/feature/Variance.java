@@ -32,7 +32,7 @@ public class Variance extends DataFlowNode {
 			throw new UnsupportedOperationException("Unsuported type: " + mType);
 		}
 		
-		DebugHelper.log(TAG, "Variance: " + var);
+		DebugHelper.log(TAG, mName + "Variance: " + var);
 
 		return var;
 	}

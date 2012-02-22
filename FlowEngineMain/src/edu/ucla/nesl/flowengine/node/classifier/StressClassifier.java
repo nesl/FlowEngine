@@ -1,5 +1,7 @@
 package edu.ucla.nesl.flowengine.node.classifier;
 
+import android.os.Debug;
+import android.os.Debug.MemoryInfo;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -108,6 +110,7 @@ public class StressClassifier extends DataFlowNode {
 		double diff = mCurTime - mLastTime;
 		if (mFeatureBitVector != 0 && diff >= 10000) {
 			InvalidDataReporter.report("Too large time difference among features: " + diff);
+			clearFeatureBitVector();
 		}
 		mLastTime = mCurTime;
 
@@ -163,6 +166,17 @@ public class StressClassifier extends DataFlowNode {
 			DebugHelper.log(TAG, "isStress: " + isStress);
 			output("Stress", "boolean", isStress, 0, timestamp);
 			clearFeatureBitVector();
+			
+			synchronized (DebugHelper.lock){
+				if (DebugHelper.isMethodTrace || DebugHelper.isAllocCounting) {
+					DebugHelper.stressCount++;
+					DebugHelper.forcelog(TAG, "isStress:" + isStress + " count:" + DebugHelper.stressCount);
+					if (DebugHelper.conversationCount >= DebugHelper.numCount
+							&& DebugHelper.stressCount >= DebugHelper.numCount) {
+						DebugHelper.stopTrace();
+					}
+				}
+			}
 		}
 	}
 

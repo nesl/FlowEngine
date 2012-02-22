@@ -149,7 +149,7 @@ public class FlowEngineControl extends Activity {
 		});
 
 		// Start FlowEngine in case it hasn't been start at boot-up time.
-		startService(new Intent(FlowEngineMainServiceName));
+		//startService(new Intent(FlowEngineMainServiceName));
 	
 		// Timer task for checking service status and updating UI.
 		timer = new Timer("UpdateUI");

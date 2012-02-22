@@ -92,7 +92,7 @@ public class Percentile extends DataFlowNode {
 			return;
 		}
 		if (!name.contains("Sorted") || !(type.equals("int[]") || type.equals("double[]"))) {
-			throw new UnsupportedOperationException("Unsupported name: " + name);
+			throw new UnsupportedOperationException("Unsupported name: " + name + " or type: " + type);
 		}
 		
 		mType = type;

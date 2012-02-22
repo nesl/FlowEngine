@@ -6,6 +6,7 @@ import java.util.Map;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -16,8 +17,10 @@ import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
 import edu.ucla.nesl.flowengine.node.BufferNode;
 import edu.ucla.nesl.flowengine.node.SeedNode;
 import edu.ucla.nesl.flowengine.node.classifier.ActivityClassifier;
+import edu.ucla.nesl.flowengine.node.classifier.ConversationClassifier;
 import edu.ucla.nesl.flowengine.node.classifier.StressClassifier;
 import edu.ucla.nesl.flowengine.node.feature.BandPower;
+import edu.ucla.nesl.flowengine.node.feature.BreathingDuration;
 import edu.ucla.nesl.flowengine.node.feature.Exhalation;
 import edu.ucla.nesl.flowengine.node.feature.Goertzel;
 import edu.ucla.nesl.flowengine.node.feature.IERatio;
@@ -25,12 +28,14 @@ import edu.ucla.nesl.flowengine.node.feature.Inhalation;
 import edu.ucla.nesl.flowengine.node.feature.LombPeriodogram;
 import edu.ucla.nesl.flowengine.node.feature.Mean;
 import edu.ucla.nesl.flowengine.node.feature.Median;
+import edu.ucla.nesl.flowengine.node.feature.NthBest;
 import edu.ucla.nesl.flowengine.node.feature.Percentile;
 import edu.ucla.nesl.flowengine.node.feature.QuartileDeviation;
 import edu.ucla.nesl.flowengine.node.feature.RRInterval;
 import edu.ucla.nesl.flowengine.node.feature.RealPeakValley;
 import edu.ucla.nesl.flowengine.node.feature.Respiration;
 import edu.ucla.nesl.flowengine.node.feature.RootMeanSquare;
+import edu.ucla.nesl.flowengine.node.feature.StandardDeviation;
 import edu.ucla.nesl.flowengine.node.feature.Stretch;
 import edu.ucla.nesl.flowengine.node.feature.Variance;
 import edu.ucla.nesl.flowengine.node.feature.Ventilation;
@@ -122,7 +127,7 @@ public class FlowEngine extends Service {
 			mSeedNodeMap.put(sensorType, new SeedNode(sensorType, device));
 			
 			if (!mIsGraphStarted 
-					&& mSeedNodeMap.get(SensorType.ACCELEROMETER) != null
+					/*&& mSeedNodeMap.get(SensorType.ACCELEROMETER) != null*/
 					&& mSeedNodeMap.get(SensorType.ECG) != null
 					&& mSeedNodeMap.get(SensorType.RIP) != null) {
 				configureGraph();
@@ -193,12 +198,12 @@ public class FlowEngine extends Service {
 	}
 	
 	private void configureGraph() {
-		SeedNode accelerometer = mSeedNodeMap.get(SensorType.ACCELEROMETER);
+		//SeedNode accelerometer = mSeedNodeMap.get(SensorType.ACCELEROMETER);
 		SeedNode ecg = mSeedNodeMap.get(SensorType.ECG);
 		SeedNode rip = mSeedNodeMap.get(SensorType.RIP);
 
 		// Activity classifier
-		RootMeanSquare rms = new RootMeanSquare();
+		/*RootMeanSquare rms = new RootMeanSquare();
 		BufferNode rmsBuffer = new BufferNode(50);
 		Mean rmsMean = new Mean();
 		Variance rmsVariance = new Variance();
@@ -213,16 +218,17 @@ public class FlowEngine extends Service {
 		goertzel.addOutputNode(activity);
 		rmsMean.addOutputNode(activity);
 		rmsMean.addOutputNode(rmsVariance);
-		rmsVariance.addOutputNode(activity);
+		rmsVariance.addOutputNode(activity);*/
 		
 		// Stress classifier
 		StressClassifier stress = new StressClassifier();
 		
-		final int RIP_SAMPLE_RATE = 17; // Hz
+		// RIP sample interval == 56 ms
+		final int RIP_SAMPLE_RATE = 18; // Hz 
 		final int RIP_BUFFER_DURATION = 60; // sec
 		
-		//BufferNode ripBuffer = new BufferNode(1062);
-		BufferNode ripBuffer = new BufferNode(RIP_SAMPLE_RATE * RIP_BUFFER_DURATION);
+		BufferNode ripBuffer = new BufferNode(1071); // 59976 ms
+		//BufferNode ripBuffer = new BufferNode(RIP_SAMPLE_RATE * RIP_BUFFER_DURATION);
 		Sort ripSort = new Sort();
 		Percentile ripPercentile = new Percentile();
 		RealPeakValley rpv = new RealPeakValley(ripPercentile, RIP_SAMPLE_RATE, RIP_BUFFER_DURATION);
@@ -282,10 +288,11 @@ public class FlowEngine extends Service {
 		stretchSort.addOutputNode(stretchPercentile);
 		stretchSort.addOutputNode(stretchMedian);
 		
+		// ECG sample interval = 4ms
 		final int ECG_SAMPLE_RATE = 250; // Hz
 		final int ECG_BUFFER_DURATION = 60; // sec
-		//BufferNode ecgBuffer = new BufferNode(14868);
-		BufferNode ecgBuffer = new BufferNode(ECG_SAMPLE_RATE * ECG_BUFFER_DURATION);
+		BufferNode ecgBuffer = new BufferNode(14994); // 59976 ms
+		//BufferNode ecgBuffer = new BufferNode(ECG_SAMPLE_RATE * ECG_BUFFER_DURATION);
 		RRInterval rrInterval = new RRInterval();
 		Sort rrSort = new Sort();
 		Median rrMedian = new Median();
@@ -332,27 +339,72 @@ public class FlowEngine extends Service {
 		ecgBuffer.addSyncedBufferNode(ripBuffer);
 		ripBuffer.addSyncedBufferNode(ecgBuffer);
 		
-		accelerometer.initializeGraph();
+		// Conversation classifier
+		ConversationClassifier conversation = new ConversationClassifier();
+		Mean ieRatioMean = new Mean();
+		Variance inhaleVariance = new Variance();
+		StandardDeviation inhaleStdev = new StandardDeviation();
+		Sort inhaleSort = new Sort();
+		Percentile inhalePercentile = new Percentile();
+		Mean exhaleMean = new Mean();
+		Mean stretchMean = new Mean();
+		Variance stretchVariance = new Variance();
+		StandardDeviation stretchStdev = new StandardDeviation();
+		BreathingDuration bdur = new BreathingDuration();
+		Mean bdMean = new Mean();
+		Sort bdurSort = new Sort();
+		NthBest nbest = new NthBest();
+				
+		ieRatioMedian.addOutputNode(conversation);
+		ieratio.addOutputNode(ieRatioMean);
+		ieRatioMean.addOutputNode(conversation);
+		inhalation.addOutputNode(inhaleVariance);
+		inhaleMean.addOutputNode(inhaleVariance);
+		inhaleVariance.addOutputNode(inhaleStdev);
+		inhaleStdev.addOutputNode(conversation);
+		inhalation.addOutputNode(inhaleSort);
+		inhaleSort.addOutputNode(inhalePercentile);
+		inhalePercentile.addOutPort("Percentile90.0", 90.0);
+		inhalePercentile.addOutputNode("Percentile90.0", conversation);
+		exhalation.addOutputNode(exhaleMean);
+		exhaleMean.addOutputNode(conversation);
+		stretch.addOutputNode(stretchMean);
+		stretch.addOutputNode(stretchVariance);
+		stretchMean.addOutputNode(stretchVariance);
+		stretchVariance.addOutputNode(stretchStdev);
+		stretchStdev.addOutputNode(conversation);
+		rpv.addOutputNode(bdur);
+		ripBuffer.addOutputNode(bdur);
+		bdur.addOutputNode(bdMean);
+		bdur.addOutputNode(bdurSort);
+		bdurSort.addOutputNode(nbest);
+		bdMean.addOutputNode(conversation);
+		nbest.addOutPort("NthBest2", 2);
+		nbest.addOutputNode("NthBest2", conversation);
+		
+		// Init from seed nodes
+		//accelerometer.initializeGraph();
 		ecg.initializeGraph();
 		rip.initializeGraph();
 	}
 	
 	@Override
 	public void onCreate() {
-		//Debug.startMethodTracing("FlowEngine");
-		
 		super.onCreate();
+		DebugHelper.logi(TAG, "Service creating..");
 		
 		notify = new NotificationHelper(this, this.getClass().getSimpleName(), this.getClass().getName(), R.drawable.ic_launcher);
 		
-		DebugHelper.logi(TAG, "Service creating");
+		DebugHelper.startTrace();
+		
+		DebugHelper.logi(TAG, "Service created.");
 	}
 	
 	@Override
 	public void onDestroy() {
-		//Debug.stopMethodTracing();
-		
 		DebugHelper.logi(TAG, "Service destroying");
+
+		DebugHelper.stopTrace();
 		
 		for (Map.Entry<Integer, Device> entry : deviceMap.entrySet()) {
 			try {

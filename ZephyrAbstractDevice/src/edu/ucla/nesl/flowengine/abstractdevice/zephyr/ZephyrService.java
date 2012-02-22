@@ -29,6 +29,8 @@ public class ZephyrService extends Service implements Runnable {
 	private static final int MSG_STOP = 1;
 	private static final int MSG_START = 2;
 	private static final int MSG_KILL = 3;
+
+	private boolean isRestartFlowEngineOnRemoteException = false;
 	
 	private FlowEngineAPI mAPI;
 	private int	mDeviceID;
@@ -177,7 +179,8 @@ public class ZephyrService extends Service implements Runnable {
 						mAPI.pushIntData(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, 0, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
-						startFlowEngineService();
+						if (isRestartFlowEngineOnRemoteException)
+							startFlowEngineService();
 					}
 	    		} else if (msgID == 0x21) {
 	    			//Log.d(TAG, "Received Breathing Waveform Packet");
@@ -200,7 +203,8 @@ public class ZephyrService extends Service implements Runnable {
 						mAPI.pushIntArrayData(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
-						startFlowEngineService();
+						if (isRestartFlowEngineOnRemoteException)
+							startFlowEngineService();
 					}
 	    		} else if (msgID == 0x22) {
 	    			//Log.d(TAG, "Received ECG Waveform Packet");
@@ -230,7 +234,8 @@ public class ZephyrService extends Service implements Runnable {
 						mAPI.pushIntArrayData(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
-						startFlowEngineService();
+						if (isRestartFlowEngineOnRemoteException)
+							startFlowEngineService();
 					}
 	    		} else if (msgID == 0x25) {
 	    			//Log.d(TAG, "Received Accelerometer Packet");
@@ -269,7 +274,8 @@ public class ZephyrService extends Service implements Runnable {
 							mAPI.pushDoubleArrayData(mDeviceID, SensorType.ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
 						} catch (RemoteException e) {
 							e.printStackTrace();
-							startFlowEngineService();
+							if (isRestartFlowEngineOnRemoteException)
+								startFlowEngineService();
 						}
 	    			}
 	    		} else if (msgID == 0x23 ) {
@@ -419,7 +425,8 @@ public class ZephyrService extends Service implements Runnable {
 				mThisService.start();
 			} catch (RemoteException e) {
 				Log.e(TAG, "Failed to add AbstractDevice..", e);
-				startFlowEngineService();
+				if (isRestartFlowEngineOnRemoteException)
+					startFlowEngineService();
 			}
 		}
 
@@ -441,7 +448,7 @@ public class ZephyrService extends Service implements Runnable {
 		Intent intent = new Intent(FlowEngineServiceName);
 
 		int numRetries = 1;
-		while (startService(intent) == null) {
+		/*while (startService(intent) == null) {
 			Log.d(TAG, "Retrying to start FlowEngineService.. (" + numRetries + ")");
 			numRetries++;
 			try {
@@ -449,8 +456,8 @@ public class ZephyrService extends Service implements Runnable {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-		}
-		
+		}*/
+
 		// Bind to the FlowEngine service.
 		Log.d(TAG, "Binding to FlowEngineService..");
 		numRetries = 1;
@@ -468,8 +475,9 @@ public class ZephyrService extends Service implements Runnable {
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		Log.i(TAG, "Service creating");
+		Log.i(TAG, "Service creating..");
 		startFlowEngineService();
+		Log.i(TAG, "Service created.");
 	}
 	
 	@Override

@@ -9,7 +9,6 @@ public class StandardDeviation extends DataFlowNode {
 
 	private double calculateStandardDeviation(double variance) {
 		double stdev = Math.sqrt(variance);
-		DebugHelper.log(TAG, "StandardDeviation: " + stdev);
 		return stdev;
 	}
 	
@@ -22,7 +21,8 @@ public class StandardDeviation extends DataFlowNode {
 			
 			double stdev = calculateStandardDeviation((Double)inputData);
 			
-			output(name + "StandardDeviation", "double", stdev, 0, timestamp);
+			DebugHelper.log(TAG, name.replace("Variance", "StandardDeviation") + ": " + stdev);
+			output(name.replace("Variance", "StandardDeviation"), "double", stdev, 0, timestamp);
 		} else {
 			throw new UnsupportedOperationException("Unsupported name: " + name);
 		}

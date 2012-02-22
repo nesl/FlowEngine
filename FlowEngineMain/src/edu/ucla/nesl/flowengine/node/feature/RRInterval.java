@@ -191,7 +191,7 @@ public class RRInterval extends DataFlowNode {
 	}
 
 	// Derivative filter and squaring
-	public int[] diffsqfilt(int[] data) {
+	private int[] diffsqfilt(int[] data) {
 		int[] x2 = new int[5];
 		int[] y2 = new int[5];
 		int k2 = 0;

@@ -7,7 +7,7 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class Median extends DataFlowNode {
 	private static final String TAG = Median.class.getSimpleName();
 
-	private double calculateMean(String type, Object inputData, int length) {
+	private double calculateMedian(String type, Object inputData, int length) {
 		double result;
 
 		if (type.equals("int[]")) {
@@ -49,7 +49,7 @@ public class Median extends DataFlowNode {
 			throw new UnsupportedOperationException("Unsupported name: " + name);
 		}
 
-		double result = calculateMean(type, inputData, length);
+		double result = calculateMedian(type, inputData, length);
 		
 		output(name.replace("Sorted", "Median"), "double", result, 0, timestamp);
 	}

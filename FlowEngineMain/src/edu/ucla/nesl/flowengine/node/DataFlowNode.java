@@ -31,6 +31,10 @@ public abstract class DataFlowNode {
 		}
 	}
 
+	public DataFlowNode() {
+		addOutPort("default", null);
+	}
+	
 	abstract public void input(String name, String type, Object inputData, int length, long timestamp);
 
 	public Object pull(Object parameter) {
@@ -44,8 +48,7 @@ public abstract class DataFlowNode {
 	public final void addOutputNode(String portName, DataFlowNode node) {
 		ArrayList<DataFlowNode> port = mOutPortMap.get(portName);
 		if (port == null) {
-			addOutPort(portName, null);
-			port = mOutPortMap.get(portName);
+			throw new IllegalArgumentException("No port name: " + portName);
 		}
 		port.add(node);
 	}
