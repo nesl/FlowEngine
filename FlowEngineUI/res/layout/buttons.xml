@@ -20,13 +20,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
         
-        
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Accelerometer Service" />
+            android:text="PhoneSensorDeviceService" />
         <ToggleButton
-            android:id="@+id/toggle_accelerometer"
+            android:id="@+id/toggle_phone"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
         
@@ -34,9 +33,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="MBedFlowEngine Service" />
+            android:text="MBedDeviceService" />
         <ToggleButton
-            android:id="@+id/toggle_flowmbed"
+            android:id="@+id/toggle_mbed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
             
@@ -44,7 +43,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Zephyr Service" />
+            android:text="ZephyrDeviceService" />
         <ToggleButton
             android:id="@+id/toggle_zephyr"
             android:layout_width="wrap_content"
