@@ -4,8 +4,8 @@ import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
-public class Goertzel extends DataFlowNode {
-	private static final String TAG = Goertzel.class.getSimpleName();
+public class FFT extends DataFlowNode {
+	private static final String TAG = FFT.class.getSimpleName();
 
 	private double mStartFrequency;
 	private double mEndFrequency;
@@ -13,7 +13,7 @@ public class Goertzel extends DataFlowNode {
 	private int mNumResult;
 	private double[] mPowerSpectrum;
 	
-	public Goertzel(double startFrequency, double endFrequency, double stepFrequency) {
+	public FFT(double startFrequency, double endFrequency, double stepFrequency) {
 		mStartFrequency = startFrequency;
 		mEndFrequency = endFrequency;
 		mStepFrequency = stepFrequency;
@@ -41,12 +41,10 @@ public class Goertzel extends DataFlowNode {
 			mPowerSpectrum[i] = calculatePower(frequency, data);
 			i += 1;
 		}
-		
-		DebugHelper.dump(TAG, mPowerSpectrum);
 	}
 	
 	@Override
-	public void input(String name, String type, Object inputData, int length, long timestamp) {
+	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
@@ -56,7 +54,8 @@ public class Goertzel extends DataFlowNode {
 		}
 
 		calculateSpectrum((double[])inputData);
+		DebugHelper.dump(TAG, mPowerSpectrum);
 		
-		output(name + "Goertzel", "double[]", mPowerSpectrum, mPowerSpectrum.length, timestamp);
+		output(name + String.format("FFT%.1f-%.1f-%.1f", mStartFrequency, mEndFrequency, mStepFrequency), "double[]", mPowerSpectrum, mPowerSpectrum.length, timestamp);
 	}
 }

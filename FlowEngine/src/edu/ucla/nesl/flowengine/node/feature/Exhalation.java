@@ -47,7 +47,7 @@ public class Exhalation extends DataFlowNode {
 	}
 	
 	@Override
-	public void input(String name, String type, Object inputData, int length, long timestamp) {
+	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;

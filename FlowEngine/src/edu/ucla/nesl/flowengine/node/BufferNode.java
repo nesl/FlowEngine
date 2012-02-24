@@ -18,11 +18,13 @@ public class BufferNode extends DataFlowNode {
 	private String mDataName;
 	private String mDataType;
 	private long mTimestamp = -1;
+	private int mSampleInterval;
 	
 	private ArrayList<BufferNode> syncBuffers = new ArrayList<BufferNode>();
 	
-	public BufferNode(int bufferSize) {
+	public BufferNode(int bufferSize, int sampleInterval) {
 		mBufferSize = bufferSize;
+		mSampleInterval = sampleInterval;
 	}
 
 	public void addSyncedBufferNode(BufferNode node) {
@@ -39,7 +41,7 @@ public class BufferNode extends DataFlowNode {
 		
 		if (mTimestamp - timestamp < -1 * BUFFER_SYNC_THRESHOLD) {
 			// current buffer is behind. Shift current buffer
-			int srcIndex = (int)((timestamp - mTimestamp) / getSampleInterval());
+			int srcIndex = (int)((timestamp - mTimestamp) / mSampleInterval);
 			if (mIndex <= srcIndex) {
 				//No data there yet. flush all current data
 				mIndex = 0;
@@ -47,7 +49,7 @@ public class BufferNode extends DataFlowNode {
 				DebugHelper.log(TAG, "No data in the requested timestamp. Flushing..");
 			} else {
 				System.arraycopy(mBuffer, srcIndex, mBuffer, 0, mIndex-srcIndex);
-				mTimestamp += srcIndex * getSampleInterval();
+				mTimestamp += srcIndex * mSampleInterval;
 				mIndex -= srcIndex;
 				DebugHelper.log(TAG, "After sync dropped " + srcIndex + " samples: my time: " + mTimestamp + ", requested time: " + timestamp);
 			}
@@ -73,7 +75,7 @@ public class BufferNode extends DataFlowNode {
 	}
 
 	@Override
-	public void input(String name, String type, Object inputData, int length, long timestamp) {
+	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (mBuffer == null || mDataType == null || mDataName == null) {
 			mDataName = name;
 			mDataType = type;
@@ -94,9 +96,9 @@ public class BufferNode extends DataFlowNode {
 		
 		if (mTimestamp < 0) {
 			mTimestamp = timestamp;
-		} else {
+		} else if (mSampleInterval > 0){
 			// check if this is contiguous timestamp
-			long expectedTime = mTimestamp + mIndex * getSampleInterval();
+			long expectedTime = mTimestamp + mIndex * mSampleInterval;
 			if (expectedTime != timestamp) {
 				DebugHelper.log(TAG, "Timestamp mismatch. Expected: " + expectedTime + ", received: " + timestamp + ", mIndex: " + mIndex + ", mTimestamp: " + timestamp);
 				// flush buffer
@@ -157,13 +159,13 @@ public class BufferNode extends DataFlowNode {
 					outputData();
 				}
 				
-				mTimestamp = timestamp + remainingSize * getSampleInterval();
+				mTimestamp = timestamp + remainingSize * mSampleInterval;
 				int nextSize = length - remainingSize;
 				while (nextSize > mBufferSize) {
 					System.arraycopy(inputData, remainingSize, mBuffer, 0, mBufferSize);
 					outputData();
 					nextSize -= mBufferSize;
-					mTimestamp += mBufferSize * getSampleInterval(); 
+					mTimestamp += mBufferSize * mSampleInterval; 
 				}
 
 				System.arraycopy(inputData, remainingSize, mBuffer, 0, nextSize);

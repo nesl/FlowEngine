@@ -176,6 +176,12 @@ public class MBedDeviceService extends Service implements Runnable {
 		public void kill() throws RemoteException {
 			handleKillRequest();
 		}
+		@Override
+		public void startSensor(int sensor) throws RemoteException {
+		}
+		@Override
+		public void stopSensor(int sensor) throws RemoteException {
+		}
 	};
 
 	// This handling is needed because this function is called from external thread.
@@ -204,7 +210,6 @@ public class MBedDeviceService extends Service implements Runnable {
 			@Override
 			public void run() {
 				Log.i(TAG, "kill()..");
-				//TODO
 				mThisService.stopSelf();
 			}
 		});

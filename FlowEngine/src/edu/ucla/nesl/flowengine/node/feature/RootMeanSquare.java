@@ -25,15 +25,14 @@ public class RootMeanSquare extends DataFlowNode {
 		for (double value: data) { 
 			rms += Math.pow(value/mFactor, 2.0);
 		}
-		rms = Math.sqrt(rms) * mScale;
 		
-		DebugHelper.log(TAG, "RMS: " + rms);
+		rms = Math.sqrt(rms) * mScale;
 
 		return rms;
 	}
 	
 	@Override
-	public void input(String name, String type, Object inputData, int length, long timestamp) {
+	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
@@ -43,7 +42,7 @@ public class RootMeanSquare extends DataFlowNode {
 		}
 
 		double rms = calculateRootMeanSquare((double[])inputData);
-		
+		//DebugHelper.log(TAG, "RMS: " + rms);
 		output(name + "RMS", "double", rms, 0, timestamp);
 	}
 }

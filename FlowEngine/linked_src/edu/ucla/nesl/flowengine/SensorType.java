@@ -14,19 +14,19 @@ public class SensorType {
 	public static String getSensorName(int sensorName) {
 		switch (sensorName) {
 		case CHEST_ACCELEROMETER:
-			return "Chest Accelerometer";
+			return "ChestAccelerometer";
 		case ECG:
 			return "ECG";
 		case RIP:
 			return "RIP";
 		case SKIN_TEMPERATURE:
-			return "Skin Temperature";
+			return "SkinTemperature";
 		case PHONE_ACCELEROMETER:
-			return "Phone Accelerometer";
+			return "PhoneAccelerometer";
 		case PHONE_GPS:
-			return "Phone GPS";
+			return "PhoneGPS";
 		case EXTERNAL_ACCELEROMETER:
-			return "External Accelerometer";
+			return "ExternalAccelerometer";
 		}
 		return "Unkown Sensor";
 	}

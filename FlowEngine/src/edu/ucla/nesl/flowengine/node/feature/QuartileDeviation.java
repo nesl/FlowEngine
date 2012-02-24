@@ -25,7 +25,7 @@ public class QuartileDeviation extends DataFlowNode {
 	}
 	
 	@Override
-	public void input(String name, String type, Object inputData, int length, long timestamp) {
+	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (!type.equals("double")) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}

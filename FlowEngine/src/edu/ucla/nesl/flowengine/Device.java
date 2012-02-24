@@ -1,9 +1,11 @@
 package edu.ucla.nesl.flowengine;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
+import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Device {
 	private DeviceAPI mInterface;
@@ -23,5 +25,15 @@ public class Device {
 	
 	public Sensor getSensor(int sensorType) {
 		return mSensorMap.get(sensorType);
+	}
+	
+	public Sensor[] getSensorList() {
+		Sensor[] sensors = new Sensor[mSensorMap.size()];
+		int sensorsIndex = 0;
+		for (Map.Entry<Integer, Sensor> entry: mSensorMap.entrySet()) {
+			Sensor sensor = entry.getValue();
+			sensors[sensorsIndex++] = sensor;
+		}
+		return sensors;
 	}
 }

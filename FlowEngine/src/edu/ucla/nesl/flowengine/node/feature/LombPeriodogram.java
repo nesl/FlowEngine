@@ -16,7 +16,7 @@ public class LombPeriodogram extends DataFlowNode {
 	private Object mData = null;
 	
 	@Override
-	public void input(String name, String type, Object inputData, int length, long timestamp) {
+	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (name.contains("Mean")) {
 			if (!type.equals("double")) {
 				throw new UnsupportedOperationException("Unsupported type: " + type);

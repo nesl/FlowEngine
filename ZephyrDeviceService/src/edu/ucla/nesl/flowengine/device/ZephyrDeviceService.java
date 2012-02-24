@@ -30,6 +30,11 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	private static final int MSG_START = 2;
 	private static final int MSG_KILL = 3;
 
+	private static final byte START_ECG_PACKET[] = { 0x02, 0x16, 0x01, 0x01, 0x5e, 0x03 };
+	private static final byte START_RIP_PACKET[] = { 0x02, 0x15, 0x01, 0x01, 0x5e, 0x03};
+	private static final byte START_ACCELEROMETER_PACKET[] = { 0x02, 0x1e, 0x01, 0x01, 0x5e, 0x03 };
+	private static final byte START_GENERAL_PACKET[] = { 0x02, 0x14, 0x01, 0x01, 0x5e, 0x03 };
+
 	private boolean isRestartFlowEngineOnRemoteException = false;
 	
 	private FlowEngineAPI mAPI;
@@ -105,16 +110,11 @@ public class ZephyrDeviceService extends Service implements Runnable {
 			return false;
 		}
 
-		byte setECG[] = { 0x02, 0x16, 0x01, 0x01, 0x5e, 0x03 };
-		byte setBreath[] = { 0x02, 0x15, 0x01, 0x01, 0x5e, 0x03};
-		byte setAcc[] = { 0x02, 0x1e, 0x01, 0x01, 0x5e, 0x03 };
-		byte setGeneral[] = { 0x02, 0x14, 0x01, 0x01, 0x5e, 0x03 };
-		
 		try {
-			mOutputStream.write(setECG);
-			mOutputStream.write(setBreath);
-			mOutputStream.write(setAcc);
-			mOutputStream.write(setGeneral);
+			mOutputStream.write(START_ECG_PACKET);
+			mOutputStream.write(START_RIP_PACKET);
+			//mOutputStream.write(START_ACCELEROMETER_PACKET);
+			//mOutputStream.write(START_GENERAL_PACKET);
 		} 
 		catch (IOException e)
 		{
@@ -386,10 +386,6 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		}
 	}
 	
-	private void kill() {
-		
-	}
-	
 	private Handler mHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
@@ -401,7 +397,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 				start();
 				break;
 			case MSG_KILL:
-				kill();
+				mThisService.stopSelf();
 				break;
 			default:
 				super.handleMessage(msg);
@@ -422,6 +418,14 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		public void kill() throws RemoteException {
 			mHandler.sendMessage(mHandler.obtainMessage(MSG_KILL));
 		}
+		@Override
+		public void startSensor(int sensor) throws RemoteException {
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_START));
+		}
+		@Override
+		public void stopSensor(int sensor) throws RemoteException {
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP));
+		}
 	};
 	
 
@@ -432,12 +436,10 @@ public class ZephyrDeviceService extends Service implements Runnable {
 			mAPI = FlowEngineAPI.Stub.asInterface(service);
 			try {
 				mDeviceID = mAPI.addDevice(mZephyrDeviceInterface);
-				Log.d(TAG, "mDeviceID: " + mDeviceID);
 				mAPI.addSensor(mDeviceID, SensorType.CHEST_ACCELEROMETER, 20);
 				mAPI.addSensor(mDeviceID, SensorType.ECG, 4);
 				mAPI.addSensor(mDeviceID, SensorType.RIP, 56);
 				mAPI.addSensor(mDeviceID, SensorType.SKIN_TEMPERATURE, 1000);
-				mThisService.start();
 			} catch (RemoteException e) {
 				Log.e(TAG, "Failed to add device..", e);
 				if (isRestartFlowEngineOnRemoteException)

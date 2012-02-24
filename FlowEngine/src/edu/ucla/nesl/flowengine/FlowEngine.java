@@ -2,6 +2,8 @@ package edu.ucla.nesl.flowengine;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.app.Service;
 import android.content.Intent;
@@ -15,15 +17,19 @@ import android.os.RemoteException;
 import android.util.Log;
 import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
+import edu.ucla.nesl.flowengine.node.ActivityGraphControl;
 import edu.ucla.nesl.flowengine.node.BufferNode;
+import edu.ucla.nesl.flowengine.node.DataFlowNode;
 import edu.ucla.nesl.flowengine.node.SeedNode;
 import edu.ucla.nesl.flowengine.node.classifier.ActivityClassifier;
 import edu.ucla.nesl.flowengine.node.classifier.ConversationClassifier;
+import edu.ucla.nesl.flowengine.node.classifier.MotionClassifier;
+import edu.ucla.nesl.flowengine.node.classifier.OutdoorDetector;
 import edu.ucla.nesl.flowengine.node.classifier.StressClassifier;
 import edu.ucla.nesl.flowengine.node.feature.BandPower;
 import edu.ucla.nesl.flowengine.node.feature.BreathingDuration;
 import edu.ucla.nesl.flowengine.node.feature.Exhalation;
-import edu.ucla.nesl.flowengine.node.feature.Goertzel;
+import edu.ucla.nesl.flowengine.node.feature.FFT;
 import edu.ucla.nesl.flowengine.node.feature.IERatio;
 import edu.ucla.nesl.flowengine.node.feature.Inhalation;
 import edu.ucla.nesl.flowengine.node.feature.LombPeriodogram;
@@ -40,6 +46,7 @@ import edu.ucla.nesl.flowengine.node.feature.StandardDeviation;
 import edu.ucla.nesl.flowengine.node.feature.Stretch;
 import edu.ucla.nesl.flowengine.node.feature.Variance;
 import edu.ucla.nesl.flowengine.node.feature.Ventilation;
+import edu.ucla.nesl.flowengine.node.operation.Scale;
 import edu.ucla.nesl.flowengine.node.operation.Sort;
 import edu.ucla.nesl.util.NotificationHelper;
 
@@ -54,30 +61,27 @@ public class FlowEngine extends Service {
 	
 	int mNextDeviceID = 1;
 	
-	private NotificationHelper notify;
-	private boolean mIsGraphStarted = false;
+	private NotificationHelper mNotify;
 	
-	private Map<Integer, Device> deviceMap = new HashMap<Integer, Device>();
+	private Map<Integer, Device> mDeviceMap = new HashMap<Integer, Device>();
 	private Map<Integer, SeedNode> mSeedNodeMap = new HashMap<Integer, SeedNode>();
-	
+
 	private Handler mHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
 			//DebugHelper.log(TAG, String.format("Thread name: %s, msg.what: %d", Thread.currentThread().getName(), msg.what));
 			
-			if (!mIsGraphStarted) {
-				return;
-			}
-			
 			SeedNode seed = mSeedNodeMap.get(msg.what);
 			if (seed == null) {
-				throw new UnsupportedOperationException("No SeedNode for SensorType: " + msg.what);
+				//throw new UnsupportedOperationException("No SeedNode for SensorType: " + msg.what);
+				DebugHelper.log(TAG, "No SeedNode for SensorType: " + msg.what);
+				return;
 			}
 			
 			Bundle bundle = (Bundle)msg.obj;
 			int deviceID = bundle.getInt(BUNDLE_DEVICE_ID);
 			
-			if (seed.getAttachedDevice() != deviceMap.get(deviceID)) {
+			if (seed.getAttachedDevice() != mDeviceMap.get(deviceID)) {
 				DebugHelper.log(TAG, "Unmatched seed node and attached device(sensor: " + msg.what + ", attempted device ID: " + deviceID);
 				return;
 			}
@@ -113,11 +117,11 @@ public class FlowEngine extends Service {
 		
 		@Override
 		public int addDevice(DeviceAPI deviceAPI) throws RemoteException {
-			synchronized(deviceMap) {
+			synchronized(mDeviceMap) {
 				Device device = new Device(deviceAPI);
 				int deviceID = mNextDeviceID;
 				mNextDeviceID += 1;
-				deviceMap.put(deviceID, device);
+				mDeviceMap.put(deviceID, device);
 				DebugHelper.log(TAG, "Added device ID: " + Integer.toString(deviceID));
 				return deviceID;
 			}
@@ -125,27 +129,36 @@ public class FlowEngine extends Service {
 
 		@Override
 		public void addSensor(int deviceID, int sensorType, int sampleInterval) throws RemoteException {
-			Device device = deviceMap.get(deviceID);
-			device.addSensor(sensorType, sampleInterval);
-			mSeedNodeMap.put(sensorType, new SeedNode(sensorType, device));
-			
-			if (!mIsGraphStarted 
-					&& mSeedNodeMap.get(SensorType.PHONE_ACCELEROMETER) != null) {
-				configureActivityGraph();
-				startGraph();
-			}
-			if (!mIsGraphStarted 
-					&& mSeedNodeMap.get(SensorType.ECG) != null
-					&& mSeedNodeMap.get(SensorType.RIP) != null) {
-				configureStressConversationGraph();
-				startGraph();
+			synchronized(mDeviceMap) {
+				synchronized(mSeedNodeMap) {
+					Device device = mDeviceMap.get(deviceID);
+					device.addSensor(sensorType, sampleInterval);
+					mSeedNodeMap.put(sensorType, new SeedNode(sensorType, device));
+
+					if (mSeedNodeMap.get(SensorType.PHONE_ACCELEROMETER) != null
+							&& mSeedNodeMap.get(SensorType.PHONE_GPS) != null) {
+						configureActivityGraph();
+					}
+					if (mSeedNodeMap.get(SensorType.ECG) != null
+							&& mSeedNodeMap.get(SensorType.RIP) != null) {
+						configureStressConversationGraph();
+					}
+				}
 			}
 		}
 
 		@Override
 		public void removeDevice(int deviceID) throws RemoteException {
-			synchronized(deviceMap) {
-				deviceMap.remove(deviceID);
+			synchronized(mDeviceMap) {
+				synchronized(mSeedNodeMap) {
+					Device removedDevice = mDeviceMap.remove(deviceID);
+					if (removedDevice != null) {
+						Sensor[] sensors = removedDevice.getSensorList();
+						for (Sensor sensor: sensors) {
+							mSeedNodeMap.remove(sensor.getSensorType());
+						}
+					}
+				}
 			}
 		}
 
@@ -196,36 +209,57 @@ public class FlowEngine extends Service {
 		}
 	}
 
-	private void startGraph() {
-		mIsGraphStarted = true;
-	}
-	
-	private void stopGraph() {
-		mIsGraphStarted = false;
-	}
-	
 	private void configureActivityGraph() {
 		//SeedNode accelerometer = mSeedNodeMap.get(SensorType.CHEST_ACCELEROMETER);
 		SeedNode accelerometer = mSeedNodeMap.get(SensorType.PHONE_ACCELEROMETER);
-		RootMeanSquare rms = new RootMeanSquare(SensorManager.GRAVITY_EARTH, 310.0);
-		BufferNode rmsBuffer = new BufferNode(50);
-		Mean rmsMean = new Mean();
-		Variance rmsVariance = new Variance();
-		Goertzel goertzel = new Goertzel(1.0, 10.0, 1.0);
-		ActivityClassifier activity= new ActivityClassifier();
+		SeedNode gps = mSeedNodeMap.get(SensorType.PHONE_GPS);
 		
+		RootMeanSquare rms = new RootMeanSquare(SensorManager.GRAVITY_EARTH, 1.0);
+		BufferNode rmsBuffer = new BufferNode(50, accelerometer.getSensor().getSampleInterval());
+		Scale scaledRMS = new Scale(310);
+		FFT scaledFFT1_3 = new FFT(1.0, 3.0, 1.0);
+		FFT scaledFFT4_5 = new FFT(4.0, 5.0, 1.0);
+		MotionClassifier motion = new MotionClassifier();
+		OutdoorDetector outdoor = new OutdoorDetector();
+		Mean scaledMean = new Mean();
+		Variance scaledVariance = new Variance();
+		Mean mean = new Mean();
+		Variance variance = new Variance();
+		FFT fft1_10 = new FFT(1.0, 10.0, 1.0);
+		ActivityClassifier activity = new ActivityClassifier();
+		ActivityGraphControl control = new ActivityGraphControl(motion, gps);
+				
 		accelerometer.addOutputNode(rms);
 		rms.addOutputNode(rmsBuffer);
-		rmsBuffer.addOutputNode(goertzel);
-		rmsBuffer.addOutputNode(rmsVariance);
-		rmsBuffer.addOutputNode(rmsMean);
-		goertzel.addOutputNode(activity);
-		rmsMean.addOutputNode(activity);
-		rmsMean.addOutputNode(rmsVariance);
-		rmsVariance.addOutputNode(activity);
+		rmsBuffer.addOutputNode(scaledRMS);
+		scaledRMS.addOutputNode(scaledFFT1_3);
+		scaledRMS.addOutputNode(scaledFFT4_5);
+		scaledFFT1_3.addOutputNode(motion);
+		scaledFFT4_5.addOutputNode(motion);
+		motion.addOutputNode(outdoor);
+
+		scaledRMS.addOutputNode(scaledMean);
+		scaledRMS.addOutputNode(scaledVariance);
+		scaledMean.addOutputNode(scaledVariance);
+		rmsBuffer.addOutputNode(mean);
+		rmsBuffer.addOutputNode(variance);
+		mean.addOutputNode(variance);
+		rmsBuffer.addOutputNode(fft1_10);
+		
+		scaledVariance.addOutputNode(activity);
+		scaledFFT1_3.addOutputNode(activity);
+		variance.addOutputNode(activity);
+		fft1_10.addOutputNode(activity);
+		gps.addOutputNode(activity);
+		activity.addOutputNode(outdoor);
+
+		outdoor.addOutputNode(control);
 		
 		// Recursive init from seednode
 		accelerometer.initializeGraph();
+		gps.initializeGraph();
+		
+		accelerometer.startSensor();
 	}
 	
 	private void configureStressConversationGraph() {
@@ -236,10 +270,10 @@ public class FlowEngine extends Service {
 		StressClassifier stress = new StressClassifier();
 		
 		// RIP sample interval == 56 ms
-		final int RIP_SAMPLE_RATE = 18; // Hz 
-		final int RIP_BUFFER_DURATION = 60; // sec
+		final double RIP_SAMPLE_RATE = 1000.0 / 56.0; // Hz 
+		final double RIP_BUFFER_DURATION = 60; // sec
 		
-		BufferNode ripBuffer = new BufferNode(1071); // 59976 ms
+		BufferNode ripBuffer = new BufferNode(1071, rip.getSensor().getSampleInterval()); // 59976 ms
 		//BufferNode ripBuffer = new BufferNode(RIP_SAMPLE_RATE * RIP_BUFFER_DURATION);
 		Sort ripSort = new Sort();
 		Percentile ripPercentile = new Percentile();
@@ -310,9 +344,9 @@ public class FlowEngine extends Service {
 		stretchPercentile.addOutputNode("Percentile25.0", stretchQD);
 		
 		// ECG sample interval = 4ms
-		final int ECG_SAMPLE_RATE = 250; // Hz
-		final int ECG_BUFFER_DURATION = 60; // sec
-		BufferNode ecgBuffer = new BufferNode(14994); // 59976 ms
+		//final int ECG_SAMPLE_RATE = 250; // Hz
+		//final int ECG_BUFFER_DURATION = 60; // sec
+		BufferNode ecgBuffer = new BufferNode(14994, ecg.getSensor().getSampleInterval()); // 59976 ms
 		//BufferNode ecgBuffer = new BufferNode(ECG_SAMPLE_RATE * ECG_BUFFER_DURATION);
 		RRInterval rrInterval = new RRInterval();
 		Sort rrSort = new Sort();
@@ -407,6 +441,10 @@ public class FlowEngine extends Service {
 		// Recursive init from seed nodes
 		ecg.initializeGraph();
 		rip.initializeGraph();
+		
+		// start sensors.
+		ecg.startSensor();
+		rip.startSensor();
 	}
 	
 	@Override
@@ -414,7 +452,7 @@ public class FlowEngine extends Service {
 		super.onCreate();
 		DebugHelper.logi(TAG, "Service creating..");
 		
-		notify = new NotificationHelper(this, this.getClass().getSimpleName(), this.getClass().getName(), R.drawable.ic_launcher);
+		mNotify = new NotificationHelper(this, this.getClass().getSimpleName(), this.getClass().getName(), R.drawable.ic_launcher);
 		
 		DebugHelper.startTrace();
 		
@@ -427,7 +465,7 @@ public class FlowEngine extends Service {
 
 		DebugHelper.stopTrace();
 		
-		for (Map.Entry<Integer, Device> entry : deviceMap.entrySet()) {
+		for (Map.Entry<Integer, Device> entry : mDeviceMap.entrySet()) {
 			try {
 				entry.getValue().getInterface().kill();
 			} catch (RemoteException e) {
