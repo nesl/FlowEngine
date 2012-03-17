@@ -3,8 +3,8 @@ package edu.ucla.nesl.flowengine.node.classifier;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
-public class ActivityClassifier extends DataFlowNode {
-	private static final String TAG = ActivityClassifier.class.getSimpleName();
+public class Activity extends DataFlowNode {
+	private static final String TAG = Activity.class.getSimpleName();
 	
 	private double[] mFFT1_10 = null;
 	private double[] mScaledFFT1_3 = null;
@@ -45,7 +45,7 @@ public class ActivityClassifier extends DataFlowNode {
 		
 		if (activity != null) {
 			DebugHelper.log(TAG, activity);
-			output("Activity", "string", activity, 0, timestamp);
+			output("Activity", "String", activity, 0, timestamp);
 		}
 	}
 	

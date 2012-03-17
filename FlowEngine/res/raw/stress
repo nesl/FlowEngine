@@ -1,0 +1,95 @@
+BEGIN DECLARE
+Stress stress
+RIP rip
+Buffer ripBuffer(1071,56)
+Sort ripSort
+PeakValley peakValley(17.86,60.0)
+Percentile ripPercentile
+Respiration respiration
+IERatio ieRatio
+Ventilation ventilation
+Inhalation inhalation
+Exhalation exhalation
+Stretch stretch
+Sort respirationSort
+Percentile respirationPercentile
+QuartileDeviation respirationQd
+Sort ieRatioSort
+Median ieRatioMedian
+Mean inhalationMean
+Sort exhalationSort
+Percentile exhalationPercentile
+QuartileDeviation exhalationQd
+Sort stretchSort
+Median stretchMedian
+Percentile stretchPercentile
+QuartileDeviation stretchQd
+ECG ecg
+Buffer ecgBuffer(14994,4)
+RRInterval rrInterval
+Sort rrIntervalSort
+Median rrIntervalMedian
+Percentile rrIntervalPercentile
+QuartileDeviation rrIntervalQd
+Mean rrIntervalMean
+Variance rrIntervalVariance
+LombPeriodogram lombperiodogram
+BandPower bandpower(0.1,0.2)
+END
+BEGIN CONNECT
+rip -> ripBuffer
+ripBuffer -> ripSort
+ripPercentile => ripSort
+ripBuffer -> peakValley
+ripBuffer -> stretch
+peakValley => ripPercentile
+peakValley -> respiration
+peakValley -> ieRatio
+peakValley -> ventilation
+peakValley -> inhalation
+peakValley -> exhalation
+peakValley -> stretch
+respiration -> respirationSort
+respirationSort -> respirationPercentile
+respirationPercentile -(0.25)-> respirationQd
+respirationPercentile -(0.75)-> respirationQd
+respirationQd -> stress
+ieRatio -> ieRatioSort
+ieRatioSort -> ieRatioMedian
+ieRatioMedian -> stress
+ventilation -> stress
+inhalation -> inhalationMean
+inhalationMean -> stress
+exhalation -> exhalationSort
+exhalationSort -> exhalationPercentile
+exhalationPercentile -(0.25)-> exhalationQd
+exhalationPercentile -(0.75)-> exhalationQd
+exhalationQd -> stress
+stretch -> stretchSort
+stretchSort -> stretchMedian
+stretchSort -> stretchPercentile
+stretchMedian -> stress
+stretchPercentile -(0.25)-> stretchQd
+stretchPercentile -(0.75)-> stretchQd
+stretchPercentile -(0.80)-> stress
+stretchQd -> stress
+ecg -> ecgBuffer
+ecgBuffer -> rrInterval
+rrInterval -> rrIntervalSort
+rrInterval -> rrIntervalMean
+rrInterval -> rrIntervalVariance
+rrInterval -> lombperiodogram
+rrIntervalSort -> rrIntervalMedian
+rrIntervalMedian -> stress
+rrIntervalSort -> rrIntervalPercentile
+rrIntervalPercentile -(0.25)-> rrIntervalQd
+rrIntervalPercentile -(0.75)-> rrIntervalQd
+rrIntervalPercentile -(0.80)-> stress
+rrIntervalQd -> stress
+rrIntervalMean -> lombperiodogram
+rrIntervalMean -> stress
+rrIntervalMean -> rrIntervalVariance
+rrIntervalVariance -> lombperiodogram
+lombperiodogram -> bandpower
+bandpower -> stress
+END

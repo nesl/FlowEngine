@@ -7,6 +7,16 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class Median extends DataFlowNode {
 	private static final String TAG = Median.class.getSimpleName();
 
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Sort")) {
+			return parentNodeName.replace("Sort", "");
+		} else if (parentNodeName.contains("Buffer")) {
+			return parentNodeName.split("Buffer")[0];
+		}
+		return parentNodeName;
+	}
+
 	private double calculateMedian(String type, Object inputData, int length) {
 		double result;
 

@@ -113,8 +113,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		try {
 			mOutputStream.write(START_ECG_PACKET);
 			mOutputStream.write(START_RIP_PACKET);
-			//mOutputStream.write(START_ACCELEROMETER_PACKET);
-			//mOutputStream.write(START_GENERAL_PACKET);
+			mOutputStream.write(START_ACCELEROMETER_PACKET);
+			mOutputStream.write(START_GENERAL_PACKET);
 		} 
 		catch (IOException e)
 		{
@@ -179,9 +179,13 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	    			//int heartRate = (receivedBytes[12]&0xFF) | ((receivedBytes[13]&0xFF)<<8);
 	    			//int respirationRate = (receivedBytes[14]&0xFF) | ((receivedBytes[15]&0xFF)<<8);
 	    			int skinTemp = (receivedBytes[16]&0xFF) | ((receivedBytes[17]&0xFF)<<8);
+	    			int battery = receivedBytes[40] & 0xFF;
+	    			int buttonWorn = receivedBytes[41] & 0xFF; 
 	    			try {
 	    				//sample interval: 1s
-						mAPI.pushIntData(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, 0, timestamp);
+						mAPI.pushInt(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, 0, timestamp);
+						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BATTERY, battery, 0, timestamp);
+						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, buttonWorn, 0, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
 						if (isRestartFlowEngineOnRemoteException)
@@ -208,7 +212,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	    			
 	    			try {
 	    				// sample interval: 56ms
-						mAPI.pushIntArrayData(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
+						mAPI.pushIntArray(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
 						if (isRestartFlowEngineOnRemoteException)
@@ -245,7 +249,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	    			
 	    			try {
 	    				// sample iterval: 4ms
-						mAPI.pushIntArrayData(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
+						mAPI.pushIntArray(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
 						if (isRestartFlowEngineOnRemoteException)
@@ -285,7 +289,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	    				//Log.d(TAG, "Acc: " + accSample[0] + ", " + accSample[1] + ", " + accSample[2]);
 		    			try {
 		    				// sample interval: 20ms
-							mAPI.pushDoubleArrayData(mDeviceID, SensorType.CHEST_ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
+							mAPI.pushDoubleArray(mDeviceID, SensorType.CHEST_ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
 						} catch (RemoteException e) {
 							e.printStackTrace();
 							if (isRestartFlowEngineOnRemoteException)
@@ -424,7 +428,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		}
 		@Override
 		public void stopSensor(int sensor) throws RemoteException {
-			mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP));
+			//mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP));
+			//TODO: individual sensor stop.
 		}
 	};
 	
@@ -440,6 +445,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 				mAPI.addSensor(mDeviceID, SensorType.ECG, 4);
 				mAPI.addSensor(mDeviceID, SensorType.RIP, 56);
 				mAPI.addSensor(mDeviceID, SensorType.SKIN_TEMPERATURE, 1000);
+				mAPI.addSensor(mDeviceID, SensorType.ZEPHYR_BATTERY, -1);
+				mAPI.addSensor(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, -1);
 			} catch (RemoteException e) {
 				Log.e(TAG, "Failed to add device..", e);
 				if (isRestartFlowEngineOnRemoteException)

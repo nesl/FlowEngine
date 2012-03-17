@@ -3,8 +3,8 @@ package edu.ucla.nesl.flowengine.node.classifier;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
-public class MotionClassifier extends DataFlowNode {
-	private static final String TAG = MotionClassifier.class.getSimpleName();
+public class Motion extends DataFlowNode {
+	private static final String TAG = Motion.class.getSimpleName();
 	private double[] mFFT1_3;
 	private double[] mFFT4_5;
 

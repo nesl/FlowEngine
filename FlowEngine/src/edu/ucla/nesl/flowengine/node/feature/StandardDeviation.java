@@ -13,6 +13,14 @@ public class StandardDeviation extends DataFlowNode {
 	}
 	
 	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Variance")) {
+			return parentNodeName.replace("Variance", "");
+		}
+		return parentNodeName;
+	}
+
+	@Override
 	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (name.contains("Variance")) {
 			if (!type.equals("double")) {

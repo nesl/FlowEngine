@@ -7,6 +7,14 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class Ventilation extends DataFlowNode {
 	private static final String TAG = Ventilation.class.getSimpleName();
 	
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("PeakValley")) {
+			return parentNodeName.split("PeakValley")[0];
+		}
+		return parentNodeName;
+	}
+	
 	private double calculateVentilation(int[] data, int length) {
 		int temp = length;
 		double xx,yy;

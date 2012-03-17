@@ -1,6 +1,5 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
-import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
@@ -11,7 +10,9 @@ public class RootMeanSquare extends DataFlowNode {
 	private double mFactor = 1.0;
 	private double mScale = 1.0;
 	
-	public RootMeanSquare() {
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		return parentNodeName;
 	}
 	
 	public RootMeanSquare(double factor, double scale) {

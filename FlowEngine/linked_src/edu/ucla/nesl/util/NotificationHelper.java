@@ -48,7 +48,6 @@ public class NotificationHelper {
 		
 		Intent notificationIntent = new Intent(mAction);
 		PendingIntent contentIntent = PendingIntent.getBroadcast(mContext, 0, notificationIntent, 0);
-				
 		notification.setLatestEventInfo(mContext, contextTitle, contextText, contentIntent);
 		
 		mNotificationManager.notify(notificationId, notification);

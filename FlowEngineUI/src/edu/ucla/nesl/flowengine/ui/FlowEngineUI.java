@@ -18,10 +18,10 @@ public class FlowEngineUI extends Activity {
 
 	private static final String TAG = FlowEngineUI.class.getSimpleName();
 	
-	private static final String FlowEngineMainServiceName = "edu.ucla.nesl.flowengine.FlowEngine";
-	private static final String AbstractDeviceAccelerometerServiceName = "edu.ucla.nesl.flowengine.device.PhoneSensorDeviceService";
-	private static final String MBedFlowEngineServiceName = "edu.ucla.nesl.flowengine.device.MBedDeviceService";
-	private static final String ZephyrServiceName = "edu.ucla.nesl.flowengine.device.ZephyrDeviceService";
+	private static final String FLOW_ENGINE_SERVICE = "edu.ucla.nesl.flowengine.FlowEngine";
+	private static final String PHONE_SENSOR_DEVICE_SERVICE = "edu.ucla.nesl.flowengine.device.PhoneSensorDeviceService";
+	private static final String MBED_DEVICE_SERVICE = "edu.ucla.nesl.flowengine.device.MBedDeviceService";
+	private static final String ZEPHYR_DEVICE_SERVICE = "edu.ucla.nesl.flowengine.device.ZephyrDeviceService";
 	
 	private static final int MSG_UPDATE_UI = 0xAB;
 	
@@ -53,7 +53,7 @@ public class FlowEngineUI extends Activity {
 	private boolean isFlowEngineServiceRunning() {
 		ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
 		for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-			if (FlowEngineMainServiceName.equals(service.service.getClassName())) {
+			if (FLOW_ENGINE_SERVICE.equals(service.service.getClassName())) {
 				return true;
 			}
 		}
@@ -63,7 +63,7 @@ public class FlowEngineUI extends Activity {
 	private boolean isAccelerometerServiceRunning() {
 		ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
 		for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-			if (AbstractDeviceAccelerometerServiceName.equals(service.service.getClassName())) {
+			if (PHONE_SENSOR_DEVICE_SERVICE.equals(service.service.getClassName())) {
 				return true;
 			}
 		}
@@ -73,7 +73,7 @@ public class FlowEngineUI extends Activity {
 	private boolean isFlowMBedEngineServiceRunning() {
 		ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
 		for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-			if (MBedFlowEngineServiceName.equals(service.service.getClassName())) {
+			if (MBED_DEVICE_SERVICE.equals(service.service.getClassName())) {
 				return true;
 			}
 		}
@@ -83,7 +83,7 @@ public class FlowEngineUI extends Activity {
 	private boolean isZephyrServiceRunning() {
 		ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
 		for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-			if (ZephyrServiceName.equals(service.service.getClassName())) {
+			if (ZEPHYR_DEVICE_SERVICE.equals(service.service.getClassName())) {
 				return true;
 			}
 		}
@@ -104,9 +104,9 @@ public class FlowEngineUI extends Activity {
 			@Override
 			public void onClick(View arg0) {
 				if (flowEngineButton.isChecked()) {
-					startService(new Intent(FlowEngineMainServiceName));
+					startService(new Intent(FLOW_ENGINE_SERVICE));
 				} else {
-					stopService(new Intent(FlowEngineMainServiceName));
+					stopService(new Intent(FLOW_ENGINE_SERVICE));
 				}
 				updateUIServiceRunningStatus();
 			}
@@ -116,9 +116,9 @@ public class FlowEngineUI extends Activity {
 			@Override
 			public void onClick(View arg0) {
 				if (accelerometerButton.isChecked()) {
-					startService(new Intent(AbstractDeviceAccelerometerServiceName));
+					startService(new Intent(PHONE_SENSOR_DEVICE_SERVICE));
 				} else {
-					stopService(new Intent(AbstractDeviceAccelerometerServiceName));
+					stopService(new Intent(PHONE_SENSOR_DEVICE_SERVICE));
 				}
 				updateUIServiceRunningStatus();
 			}
@@ -128,9 +128,9 @@ public class FlowEngineUI extends Activity {
 			@Override
 			public void onClick(View arg0) {
 				if (mbedButton.isChecked()) {
-					startService(new Intent(MBedFlowEngineServiceName));
+					startService(new Intent(MBED_DEVICE_SERVICE));
 				} else {
-					stopService(new Intent(MBedFlowEngineServiceName));
+					stopService(new Intent(MBED_DEVICE_SERVICE));
 				}
 				updateUIServiceRunningStatus();
 			}
@@ -140,9 +140,9 @@ public class FlowEngineUI extends Activity {
 			@Override
 			public void onClick(View arg0) {
 				if (zephyrButton.isChecked()) {
-					startService(new Intent(ZephyrServiceName));
+					startService(new Intent(ZEPHYR_DEVICE_SERVICE));
 				} else {
-					stopService(new Intent(ZephyrServiceName));
+					stopService(new Intent(ZEPHYR_DEVICE_SERVICE));
 				}
 				updateUIServiceRunningStatus();
 			}

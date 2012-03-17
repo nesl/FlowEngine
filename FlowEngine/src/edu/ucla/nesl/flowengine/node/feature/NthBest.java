@@ -9,6 +9,14 @@ public class NthBest extends DataFlowNode {
 	private String mType;
 	private Object mSorted;
 
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Sort")) {
+			return parentNodeName.replace("Sort", "");
+		}
+		return parentNodeName;
+	}
+
 	public double getNthBest(int nth) {
 		if (mType == null || mSorted == null) {
 			InvalidDataReporter.report("Invalid mType(" + mType + ") or mSorted(" + mSorted + ")");

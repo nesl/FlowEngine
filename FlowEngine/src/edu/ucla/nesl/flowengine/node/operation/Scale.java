@@ -8,7 +8,16 @@ public class Scale extends DataFlowNode {
 	
 	private double mScale;
 	
-	public Scale(double scale) {
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Buffer")) {
+			return parentNodeName.split("Buffer")[0];
+		}
+		return parentNodeName;
+	}
+
+	public Scale(String simpleNodeName, double scale) {
+		super(simpleNodeName);
 		mScale = scale;
 	}
 	

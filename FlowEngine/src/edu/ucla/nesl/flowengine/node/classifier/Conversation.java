@@ -1,12 +1,11 @@
 package edu.ucla.nesl.flowengine.node.classifier;
 
-import android.os.Debug;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
-public class ConversationClassifier extends DataFlowNode {
-	private static final String TAG = ConversationClassifier.class.getSimpleName();
+public class Conversation extends DataFlowNode {
+	private static final String TAG = Conversation.class.getSimpleName();
 
 	private final static int SPEAKING = 1;
 	private final static int QUIET = 0;
@@ -38,7 +37,7 @@ public class ConversationClassifier extends DataFlowNode {
 	private static final int BIT_MEAN_BREATHINGDURATION = 1 << INDEX_MEAN_BREATHINGDURATION;
 	private static final int BIT_SECONDBEST_BREATHINGDURATION = 1 << INDEX_SECONDBEST_BREATHINGDURATION;
 	private static final int BIT_STDEV_STRETCH = 1 << INDEX_STDEV_STRETCH;
-
+	
 	private void clearFeatureBitVector() {
 		mFeatureBitVector = 0;
 	}
@@ -46,7 +45,6 @@ public class ConversationClassifier extends DataFlowNode {
 	private boolean isAllFeature() {
 		return mFeatureBitVector == 0xFF; 
 	}
-	
 
 	@Override
 	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {

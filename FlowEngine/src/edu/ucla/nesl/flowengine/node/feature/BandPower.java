@@ -10,7 +10,13 @@ public class BandPower extends DataFlowNode {
 	private double mRangeLower;
 	private double mRangeUpper;
 	
-	public BandPower(double lower, double upper) {
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		return parentNodeName;
+	}
+
+	public BandPower(String simpleNodeName, double lower, double upper) {
+		super(simpleNodeName);
 		mRangeLower = lower;
 		mRangeUpper = upper;
 	}

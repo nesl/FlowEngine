@@ -15,6 +15,16 @@ public class Variance extends DataFlowNode {
 	private long mTimestamp;
 	private Object mData = null;
 
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Mean")) {
+			return parentNodeName.replace("Mean", "");
+		} else if (parentNodeName.contains("Buffer")) {
+			return parentNodeName.split("Buffer")[0];
+		}
+		return parentNodeName;
+	}
+	
 	private double calculateVariance() {
 		double sum = 0.0;
 		double var;

@@ -1,13 +1,11 @@
 package edu.ucla.nesl.flowengine.node.classifier;
 
-import android.os.Debug;
-import android.os.Debug.MemoryInfo;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
-public class StressClassifier extends DataFlowNode {
-	private static final String TAG = StressClassifier.class.getSimpleName();
+public class Stress extends DataFlowNode {
+	private static final String TAG = Stress.class.getSimpleName();
 	
 	private long mCurTime = 0;
 	private long mLastTime = 0;

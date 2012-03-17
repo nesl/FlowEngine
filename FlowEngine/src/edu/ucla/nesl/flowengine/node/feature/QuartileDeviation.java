@@ -13,7 +13,12 @@ public class QuartileDeviation extends DataFlowNode {
 	boolean mIsNewPercentile25 = false;
 	String mName;
 	
-	public QuartileDeviation() {
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Percentile")) {
+			return parentNodeName.split("Percentile")[0];
+		}
+		return parentNodeName;
 	}
 
 	private double calculateQuartileDeviation() {

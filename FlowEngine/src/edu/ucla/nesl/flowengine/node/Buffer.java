@@ -5,10 +5,8 @@ import java.util.ArrayList;
 import android.util.Log;
 import edu.ucla.nesl.flowengine.DebugHelper;
 
-//TODO: buffering based on timestamp.
-
-public class BufferNode extends DataFlowNode {
-	private static final String TAG = BufferNode.class.getSimpleName();
+public class Buffer extends DataFlowNode {
+	private static final String TAG = Buffer.class.getSimpleName();
 	
 	private static final int BUFFER_SYNC_THRESHOLD = 100; // ms
 	
@@ -20,14 +18,20 @@ public class BufferNode extends DataFlowNode {
 	private long mTimestamp = -1;
 	private int mSampleInterval;
 	
-	private ArrayList<BufferNode> syncBuffers = new ArrayList<BufferNode>();
+	private ArrayList<Buffer> syncBuffers = new ArrayList<Buffer>();
 	
-	public BufferNode(int bufferSize, int sampleInterval) {
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		return parentNodeName;
+	}
+
+	public Buffer(String simpleNodeName, int bufferSize, int sampleInterval) {
+		super(simpleNodeName);
 		mBufferSize = bufferSize;
 		mSampleInterval = sampleInterval;
 	}
 
-	public void addSyncedBufferNode(BufferNode node) {
+	public void addSyncedBufferNode(Buffer node) {
 		syncBuffers.add(node);
 	}
 	
@@ -110,7 +114,7 @@ public class BufferNode extends DataFlowNode {
 		
 		if (mIndex == 0) {
 			// start of buffer. sync.
-			for (BufferNode node: syncBuffers) {
+			for (Buffer node: syncBuffers) {
 				DebugHelper.log(TAG, "Requesting sync...");
 				long retTimestamp = node.sync(mTimestamp);
 				if (retTimestamp > 0) {

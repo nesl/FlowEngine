@@ -5,8 +5,8 @@ import java.util.LinkedList;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
-public class OutdoorDetector extends DataFlowNode {
-	private static final String TAG = OutdoorDetector.class.getSimpleName();
+public class Outdoor extends DataFlowNode {
+	private static final String TAG = Outdoor.class.getSimpleName();
 
 	//private static final int WINDOW = 90; // seconds
 	private static final int WINDOW = 5; // seconds

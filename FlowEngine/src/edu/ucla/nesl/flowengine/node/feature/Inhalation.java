@@ -8,7 +8,15 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Inhalation extends DataFlowNode {
 	private static final String TAG = Inhalation.class.getSimpleName();
-	
+
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("PeakValley")) {
+			return parentNodeName.split("PeakValley")[0];
+		}
+		return parentNodeName;
+	}
+
 	private int[] calculateInhalation(int[] data, int length) {
 		int valleyIndex=0,peakIndex=0;
 		

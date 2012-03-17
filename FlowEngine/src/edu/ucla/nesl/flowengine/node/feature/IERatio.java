@@ -10,6 +10,14 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class IERatio extends DataFlowNode {
 	private static final String TAG = IERatio.class.getSimpleName();
 
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("PeakValley")) {
+			return parentNodeName.split("PeakValley")[0];
+		}
+		return parentNodeName;
+	}
+
 	private int[] calculateIERatio(int[] data, int length) {
 		int inhalation = 0,exhalation = 0;
 		

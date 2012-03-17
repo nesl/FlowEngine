@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.BLUETOOTH"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
-    
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     
     <application
         android:icon="@drawable/ic_launcher"
@@ -24,7 +24,11 @@
 	            <action 
 	                android:name="edu.ucla.nesl.flowengine.FlowEngine" />
 	        </intent-filter>
-	    </service>
+	        <intent-filter>
+	            <action 
+	                android:name="edu.ucla.nesl.flowengine.FlowEngine.application" />
+	        </intent-filter>
+	        	    </service>
 	    
 	    <!--<receiver 
 	        android:name=".BootReceiver">

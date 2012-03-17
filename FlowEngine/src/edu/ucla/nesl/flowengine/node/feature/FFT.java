@@ -13,7 +13,16 @@ public class FFT extends DataFlowNode {
 	private int mNumResult;
 	private double[] mPowerSpectrum;
 	
-	public FFT(double startFrequency, double endFrequency, double stepFrequency) {
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Buffer")) {
+			return parentNodeName.split("Buffer")[0];
+		}
+		return parentNodeName;
+	}
+
+	public FFT(String simpleNodeName, double startFrequency, double endFrequency, double stepFrequency) {
+		super(simpleNodeName);
 		mStartFrequency = startFrequency;
 		mEndFrequency = endFrequency;
 		mStepFrequency = stepFrequency;

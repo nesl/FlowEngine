@@ -13,6 +13,14 @@ public class RRInterval extends DataFlowNode {
 	int mLastPeakTime = 0;
 	private int[] mRR = new int[256];
 
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Buffer")) {
+			return parentNodeName.split("Buffer")[0];
+		}
+		return parentNodeName;
+	}
+
 	private int[] calculateRRInterval(int[] data) {
 		int[] tbody = lowpass(data);
 		int[] tbandbody0 = bandpass(tbody);

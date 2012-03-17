@@ -1,16 +1,16 @@
 package edu.ucla.nesl.flowengine.node;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
-import edu.ucla.nesl.flowengine.node.classifier.MotionClassifier;
+import edu.ucla.nesl.flowengine.node.classifier.Motion;
 
 
 public class ActivityGraphControl extends DataFlowNode {
 	private static final String TAG = ActivityGraphControl.class.getSimpleName();
 	
-	private MotionClassifier mMotionNode;
+	private Motion mMotionNode;
 	private SeedNode mGpsSeed;
 	
-	public ActivityGraphControl(MotionClassifier motion, SeedNode gpsSeed) {
+	public ActivityGraphControl(Motion motion, SeedNode gpsSeed) {
 		mMotionNode = motion;
 		mGpsSeed = gpsSeed;
 	}

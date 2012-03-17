@@ -15,6 +15,16 @@ public class BreathingDuration extends DataFlowNode {
 	private long mTimestamp;
 
 	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("PeakValley")) {
+			return parentNodeName.split("PeakValley")[0];
+		} else if (parentNodeName.contains("Buffer")) {
+			return parentNodeName.split("Buffer")[0];
+		}
+		return parentNodeName;
+	}
+
+	@Override
 	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (length <= 0) {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);

@@ -5,8 +5,8 @@ import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
-public class RealPeakValley extends DataFlowNode {
-	private static final String TAG = RealPeakValley.class.getSimpleName();
+public class PeakValley extends DataFlowNode {
+	private static final String TAG = PeakValley.class.getSimpleName();
 	
 	private int mIndex = 0;
 	
@@ -36,8 +36,16 @@ public class RealPeakValley extends DataFlowNode {
 	private int mNumConsecutiveEmptyRealPeaks = 0;
 	private final int NUM_NO_PEAKS_TOLERANCE = 2;
 
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Buffer")) {
+			return parentNodeName.split("Buffer")[0];
+		}
+		return parentNodeName;
+	}
 
-	public RealPeakValley(double sampleRate, double dataDuration) {
+	public PeakValley(String simpleNodeName, double sampleRate, double dataDuration) {
+		super(simpleNodeName);
 		SAMPLE_RATE = sampleRate;
 		DATA_DURATION = dataDuration;
 		MIN_NUM_PEAKS_THRESHOLD = (DATA_DURATION / MIN_PEAK_DURATION);

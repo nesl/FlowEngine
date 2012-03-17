@@ -11,6 +11,19 @@ public class Percentile extends DataFlowNode {
 	private Object mSorted;
 
 	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Sort")) {
+			return parentNodeName.replace("Sort", "");
+		}
+		return parentNodeName;
+	}
+
+	@Override 
+	protected String getParameterName(Object parameter) {
+		return String.format("%.1f", (Double)parameter);
+	}
+	
+	@Override
 	public ResultData processPull(Object parameter) {
 		ResultData[] results = pull();
 		

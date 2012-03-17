@@ -15,6 +15,16 @@ public class Stretch extends DataFlowNode {
 	private String mName;
 	private long mTimestamp;
 	
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("PeakValley")) {
+			return parentNodeName.split("PeakValley")[0];
+		} else if (parentNodeName.contains("Buffer")) {
+			return parentNodeName.split("Buffer")[0];
+		}
+		return parentNodeName;
+	}
+
 	private int[] calculateStretch() {
 		ArrayList<Integer> list = new ArrayList<Integer>();
 

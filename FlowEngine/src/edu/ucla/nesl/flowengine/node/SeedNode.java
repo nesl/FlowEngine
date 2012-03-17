@@ -1,9 +1,12 @@
 package edu.ucla.nesl.flowengine.node;
 
+import java.util.Map;
+
 import android.os.RemoteException;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.Device;
 import edu.ucla.nesl.flowengine.Sensor;
+import edu.ucla.nesl.flowengine.SensorType;
 
 
 public class SeedNode extends DataFlowNode {
@@ -12,9 +15,19 @@ public class SeedNode extends DataFlowNode {
 	private int mSensorType;
 	private Device mAttachedDevice;
 
-	public SeedNode(int sensorType, Device attachedDevice) {
+	public SeedNode(String simpleNodeName, int sensorType, Device attachedDevice) {
+		super(simpleNodeName);
 		mSensorType = sensorType;
 		mAttachedDevice = attachedDevice;
+	}
+
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		return "";
+	}
+	
+	public void configureNodeName(Map<String, DataFlowNode> nodeNameMap) {
+		configurePushNodeName(nodeNameMap, null);
 	}
 
 	public Sensor getSensor() {
@@ -27,6 +40,10 @@ public class SeedNode extends DataFlowNode {
 	
 	public void initializeGraph() {
 		super.initializeGraph(null);
+	}
+	
+	public void attachDevice(Device device) {
+		mAttachedDevice = device;
 	}
 
 	@Override
@@ -50,8 +67,17 @@ public class SeedNode extends DataFlowNode {
 	}
 	
 	@Override
-	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
-		DebugHelper.log(TAG, "name: " + name + ", type: " + type + ", length: " + length + ", timestamp: " + timestamp);
-		output(name, type, inputData, length, timestamp);
+	protected void processInput(String name, String type, Object data, int length, long timestamp) {
+		//DebugHelper.log(TAG, "name: " + name + ", type: " + type + ", length: " + length + ", timestamp: " + timestamp);
+		if (type.equals("String")) {
+			DebugHelper.log(TAG, (String)data);
+		}
+		if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BATTERY))) {
+			DebugHelper.log(TAG, name + ": " + (Integer)data);
+		} else if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BUTTON_WORN))) {
+			DebugHelper.log(TAG, name + ": " + (Integer)data);
+		}
+		
+		output(name, type, data, length, timestamp);
 	}
 }

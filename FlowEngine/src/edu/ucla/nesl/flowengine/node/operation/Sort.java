@@ -14,6 +14,14 @@ public class Sort extends DataFlowNode {
 	long mTimestamp;
 	Object mSorted;
 	
+	@Override
+	protected String processParentNodeName(String parentNodeName) {
+		if (parentNodeName.contains("Buffer")) {
+			return parentNodeName.split("Buffer")[0];
+		}
+		return parentNodeName;
+	}
+
 	private void sort() {
 		if (mType.equals("int[]")) {
 			Arrays.sort((int[])mSorted);
