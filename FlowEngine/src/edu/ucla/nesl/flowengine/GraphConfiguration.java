@@ -58,6 +58,14 @@ public class GraphConfiguration {
 	private boolean mIsZephyrBattery = false;
 	private boolean mIsZephyrButtonWorn = false;
 
+	private static final int STATUS_DEFAULT = 0;
+	private static final int STATUS_DECLARE = 1;
+	private static final int STATUS_CONNECT = 2;
+	private static final String classNamePrefix = "edu.ucla.nesl.flowengine.node.";
+	private static final String classNameClassifierPrefix = "edu.ucla.nesl.flowengine.node.classifier.";
+	private static final String classNameFeaturePrefix = "edu.ucla.nesl.flowengine.node.feature.";
+	private static final String classNameOperationPrefix = "edu.ucla.nesl.flowengine.node.operation.";
+
 	public GraphConfiguration(Map<Integer, SeedNode> seedNodeMap) {
 		mSeedNodeMap = seedNodeMap;
 	}
@@ -475,14 +483,6 @@ public class GraphConfiguration {
 	}
 	*/
 	
-	private static final int STATUS_DEFAULT = 0;
-	private static final int STATUS_DECLARE = 1;
-	private static final int STATUS_CONNECT = 2;
-	private static final String classNamePrefix = "edu.ucla.nesl.flowengine.node.";
-	private static final String classNameClassifierPrefix = "edu.ucla.nesl.flowengine.node.classifier.";
-	private static final String classNameFeaturePrefix = "edu.ucla.nesl.flowengine.node.feature.";
-	private static final String classNameOperationPrefix = "edu.ucla.nesl.flowengine.node.operation.";
-
 	private DataFlowNode instantiateNode(String className, String instanceName) {
 		Class currentClass;
 		try {
@@ -731,15 +731,10 @@ public class GraphConfiguration {
 		} catch (IOException e) {
 			DebugHelper.loge(TAG, "IOException");
 			e.printStackTrace();
+			return;
 		}
 		
-		/*for (Map.Entry<String, DataFlowNode> entry: instanceNameMap.entrySet()) {
-			String instanceName = entry.getKey();
-			DataFlowNode node = entry.getValue();
-			DebugHelper.log(TAG, instanceName + ": " + node.getClass().getName());
-		}*/
-
-		// add new seed to mSeedNodeMap
+		// initialize and add new seed to mSeedNodeMap
 		for (Map.Entry<Integer, SeedNode> entry: seedNodeMap.entrySet()) {
 			SeedNode newSeed = entry.getValue();
 			Integer sensor = entry.getKey();
@@ -751,7 +746,14 @@ public class GraphConfiguration {
 		}
 
 		// for debugging
-		for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
+		/*for (Map.Entry<String, DataFlowNode> entry: instanceNameMap.entrySet()) {
+			String instanceName = entry.getKey();
+			DataFlowNode node = entry.getValue();
+			DebugHelper.log(TAG, instanceName + ": " + node.getClass().getName());
+		}*/
+
+		// for debugging
+		/*for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
 			int sensor = entry.getKey();
 			SeedNode node = entry.getValue();
 			DebugHelper.log(TAG, node.getClass().getName() + ": " + sensor + " device: " + node.getAttachedDevice());
@@ -761,6 +763,6 @@ public class GraphConfiguration {
 			String nodeName = entry.getKey();
 			DataFlowNode node = entry.getValue();
 			DebugHelper.log(TAG, nodeName + ": " + node.getClass().getName());
-		}
+		}*/
 	}
 }
