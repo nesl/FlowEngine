@@ -69,7 +69,7 @@ public class Inhalation extends DataFlowNode {
 
 		int[] inhalation = calculateInhalation((int[])inputData, length);
 
-		output(name + "Inhalation", "int[]", inhalation, inhalation.length, timestamp);
+		output(name.replace("PeakValley", "Inhalation"), "int[]", inhalation, inhalation.length, timestamp);
 	}
 
 }

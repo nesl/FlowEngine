@@ -570,7 +570,12 @@ public class GraphConfiguration {
 			}
 		} else if (operation.contains("(") && operation.contains(")")) { // process parameterized push port
 			String portName = operation.split("\\(")[1].split("\\)")[0];
-			double parameter = Double.parseDouble(portName);
+			Object parameter;
+			if (portName.contains(".")) { 
+				parameter = Double.parseDouble(portName);
+			} else {
+				parameter = Integer.parseInt(portName);
+			}
 			if (!left.isPushParameterizedConnected(right, portName)) {
 				if (!left.addOutputNode(portName, right)) {
 					left.addOutputPort(portName, parameter);
@@ -582,13 +587,21 @@ public class GraphConfiguration {
 		}
 	}
 	
-	public void configureStressTemp() {
-		if (mIsStress) {
-			return;
+	public void configureStressGraph() {
+		if (!mIsStress) {
+			configureGraph(R.raw.stress);
+			mIsStress = true;
 		}
-		
-		int configResourceId = R.raw.stress;
-		
+	}
+
+	public void configureConversationGraph() {
+		if (!mIsConversation) {
+			configureGraph(R.raw.conversation);
+			mIsConversation = true;
+		}
+	}
+
+	private void configureGraph(int configResourceId) {
 		InputStream is = FlowEngine.getInstance().getResources().openRawResource(configResourceId);
 		BufferedReader configFile = new BufferedReader(new InputStreamReader(is));
 		
@@ -693,8 +706,8 @@ public class GraphConfiguration {
 						if (!isMergePass) {
 							connect(left, operation, right);
 						} else { // if it is merge pass
-							// find left node in mNodeNameMap
 							DataFlowNode globalLeft = mNodeNameMap.get(left.getName());
+							DebugHelper.log(TAG, "left.getName(): " + left.getName() + ", globalLeft: " + globalLeft);
 							if (globalLeft == null) {
 								left.resetConnection();
 								mNodeNameMap.put(left.getName(), left);
@@ -702,6 +715,7 @@ public class GraphConfiguration {
 							}
 							
 							DataFlowNode globalRight = mNodeNameMap.get(right.getName());
+							DebugHelper.log(TAG, "right.getName(): " + right.getName() + ", globalRight: " + globalRight);
 							if (globalRight == null) {
 								right.resetConnection();
 								mNodeNameMap.put(right.getName(), right);
@@ -725,17 +739,18 @@ public class GraphConfiguration {
 			DebugHelper.log(TAG, instanceName + ": " + node.getClass().getName());
 		}*/
 
-		// merge with mSeedNodeMap
+		// add new seed to mSeedNodeMap
 		for (Map.Entry<Integer, SeedNode> entry: seedNodeMap.entrySet()) {
-			entry.getValue().initializeGraph();
-			SeedNode existingSeedNode = mSeedNodeMap.get(entry.getKey());
-			if (existingSeedNode != null) {
-				existingSeedNode.reconnect(entry.getValue());
-			} else {
-				mSeedNodeMap.put(entry.getKey(), entry.getValue());
+			SeedNode newSeed = entry.getValue();
+			Integer sensor = entry.getKey();
+			newSeed.initializeGraph();
+			SeedNode existingSeedNode = mSeedNodeMap.get(sensor);
+			if (existingSeedNode == null) {
+				mSeedNodeMap.put(sensor, newSeed);
 			}
 		}
-		
+
+		// for debugging
 		for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
 			int sensor = entry.getKey();
 			SeedNode node = entry.getValue();
@@ -747,7 +762,5 @@ public class GraphConfiguration {
 			DataFlowNode node = entry.getValue();
 			DebugHelper.log(TAG, nodeName + ": " + node.getClass().getName());
 		}
-		
-		mIsStress = true;
 	}
 }

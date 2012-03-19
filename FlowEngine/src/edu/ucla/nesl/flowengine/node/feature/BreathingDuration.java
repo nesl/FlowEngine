@@ -33,7 +33,7 @@ public class BreathingDuration extends DataFlowNode {
 		if (!type.equals("int[]")) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
-		if (name.contains("RIPRealPeakValley")) {
+		if (name.contains("RIPPeakValley")) {
 			mRPV = (int[])inputData;
 		} else if (name.contains("RIP")) {
 			mRIP = (int[])inputData;

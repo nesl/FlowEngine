@@ -182,9 +182,15 @@ public class FlowEngine extends Service {
 					} else {
 						mSeedNodeMap.put(sensor, new SeedNode(SensorType.getSensorName(sensor), sensor, device));
 					}
-					//mGraphConfig.configureActivityTemp();
-					mGraphConfig.configureStressTemp();
+					mGraphConfig.configureStressGraph();
+					mGraphConfig.configureConversationGraph();
 					DebugHelper.log(TAG, "Added sensor type: " + sensor);
+					
+					for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
+						sensor = entry.getKey();
+						SeedNode node = entry.getValue();
+						DebugHelper.log(TAG, node.getClass().getName() + ": " + sensor + " device: " + node.getAttachedDevice());
+					}
 				}
 			}
 		}

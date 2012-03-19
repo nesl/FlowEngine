@@ -39,7 +39,7 @@ public class Percentile extends DataFlowNode {
 		double percentileResult = getPercentile(percentile);
 		
 		return new ResultData(
-				name.replace("Sorted", String.format("Percentile%.1f", percentile)), 
+				name.replace("Sort", String.format("Percentile%.1f", percentile)), 
 				"double", 
 				percentileResult, 
 				0, 
@@ -112,7 +112,7 @@ public class Percentile extends DataFlowNode {
 		}
 		double result = getPercentile(percentile);
 		
-		ResultData resultData = new ResultData(name.replace("Sorted", String.format("Percentile%.1f", percentile)), "double", result, 0, timestamp);
+		ResultData resultData = new ResultData(name.replace("Sort", String.format("Percentile%.1f", percentile)), "double", result, 0, timestamp);
 		return resultData;
 	}
 	
@@ -122,7 +122,7 @@ public class Percentile extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!name.contains("Sorted") || !(type.equals("int[]") || type.equals("double[]"))) {
+		if (!name.contains("Sort") || !(type.equals("int[]") || type.equals("double[]"))) {
 			throw new UnsupportedOperationException("Unsupported name: " + name + " or type: " + type);
 		}
 		

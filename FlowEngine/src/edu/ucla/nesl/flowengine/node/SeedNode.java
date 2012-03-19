@@ -72,11 +72,11 @@ public class SeedNode extends DataFlowNode {
 		if (type.equals("String")) {
 			DebugHelper.log(TAG, (String)data);
 		}
-		if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BATTERY))) {
+		/*if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BATTERY))) {
 			DebugHelper.log(TAG, name + ": " + (Integer)data);
 		} else if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BUTTON_WORN))) {
 			DebugHelper.log(TAG, name + ": " + (Integer)data);
-		}
+		}*/
 		
 		output(name, type, data, length, timestamp);
 	}

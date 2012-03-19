@@ -59,7 +59,7 @@ public class Stretch extends DataFlowNode {
 		if (!type.equals("int[]")) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
-		if (name.contains("RIPRealPeakValley")) {
+		if (name.contains("RIPPeakValley")) {
 			mRPV = (int[])inputData;
 		} else if (name.contains("RIP")) {
 			mRIP = (int[])inputData;
@@ -71,7 +71,7 @@ public class Stretch extends DataFlowNode {
 		
 		if (mRPV != null && mRIP != null) {
 			if(mRPV.length < 8) {
-				output("Stretch", "int[]", EMPTY_INT_ARRAY, 0, mTimestamp);
+				output(mName + "Stretch", "int[]", EMPTY_INT_ARRAY, 0, mTimestamp);
 			} else {
 				int[] stretches = calculateStretch();
 				output(mName + "Stretch", "int[]", stretches, stretches.length, mTimestamp);

@@ -55,12 +55,12 @@ public class Median extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!name.contains("Sorted")) {
+		if (!name.contains("Sort")) {
 			throw new UnsupportedOperationException("Unsupported name: " + name);
 		}
 
 		double result = calculateMedian(type, inputData, length);
 		
-		output(name.replace("Sorted", "Median"), "double", result, 0, timestamp);
+		output(name.replace("Sort", "Median"), "double", result, 0, timestamp);
 	}
 }

@@ -65,6 +65,6 @@ public class Respiration extends DataFlowNode {
 
 		int[] respiration = calculateRespiration((int[])inputData, length);
 		
-		output(name + "Respiration", "int[]", respiration, respiration.length, timestamp);
+		output(name.replace("PeakValley", "Respiration"), "int[]", respiration, respiration.length, timestamp);
 	}
 }

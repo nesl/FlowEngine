@@ -447,6 +447,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 				mAPI.addSensor(mDeviceID, SensorType.SKIN_TEMPERATURE, 1000);
 				mAPI.addSensor(mDeviceID, SensorType.ZEPHYR_BATTERY, -1);
 				mAPI.addSensor(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, -1);
+				start();
 			} catch (RemoteException e) {
 				Log.e(TAG, "Failed to add device..", e);
 				if (isRestartFlowEngineOnRemoteException)

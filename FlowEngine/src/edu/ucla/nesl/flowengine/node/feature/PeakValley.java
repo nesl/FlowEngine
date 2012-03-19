@@ -117,7 +117,7 @@ public class PeakValley extends DataFlowNode {
 
 		int[] realPeakValley = calculateRealPeakValley((int[])inputData);
 		
-		output(name + "RealPeakValley", "int[]", realPeakValley, realPeakValley.length, timestamp);
+		output(name + "PeakValley", "int[]", realPeakValley, realPeakValley.length, timestamp);
 	}
 	
 	/**

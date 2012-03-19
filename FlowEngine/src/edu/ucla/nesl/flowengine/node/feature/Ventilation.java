@@ -67,6 +67,6 @@ public class Ventilation extends DataFlowNode {
 
 		double ventilation = calculateVentilation((int[])inputData, length);
 		
-		output(name + "Ventilation", "double", ventilation, 0, timestamp);
+		output(name.replace("PeakValley", "Ventilation"), "double", ventilation, 0, timestamp);
 	}
 }

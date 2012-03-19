@@ -54,7 +54,7 @@ public class NthBest extends DataFlowNode {
 		double result = getNthBest(nth);
 		
 		ResultData resultData = new ResultData(
-				name.replace("Sorted", String.format("NthBest%d", nth)), 
+				name.replace("Sort", String.format("NthBest%d", nth)), 
 				"double", 
 				result, 
 				0, 
@@ -68,7 +68,7 @@ public class NthBest extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!name.contains("Sorted") || !(type.equals("int[]"))) {
+		if (!name.contains("Sort") || !(type.equals("int[]"))) {
 			throw new UnsupportedOperationException("Unsupported name: " + name + " or type: " + type);
 		}
 		

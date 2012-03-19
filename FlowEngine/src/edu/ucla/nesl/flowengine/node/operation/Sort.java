@@ -35,7 +35,7 @@ public class Sort extends DataFlowNode {
 	@Override
 	public ResultData processPull(Object parameter) {
 		sort();
-		return new ResultData(mName + "Sorted", mType, mSorted, mLength, mTimestamp);
+		return new ResultData(mName + "Sort", mType, mSorted, mLength, mTimestamp);
 	}
 	
 	@Override
@@ -62,7 +62,7 @@ public class Sort extends DataFlowNode {
 
 		if (isOutputConnected()) {
 			sort();
-			output(mName + "Sorted", mType, mSorted, mLength, mTimestamp);
+			output(mName + "Sort", mType, mSorted, mLength, mTimestamp);
 		}
 	}
 }

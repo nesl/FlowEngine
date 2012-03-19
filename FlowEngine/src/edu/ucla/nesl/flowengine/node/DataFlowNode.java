@@ -182,12 +182,14 @@ public abstract class DataFlowNode {
 			LinkedList<DataFlowNode> nodeList = entry.getValue();
 			if (parameter == null) {
 				for (DataFlowNode node: nodeList) {
+					DebugHelper.log(mSimpleNodeName, mNodeName + " -> " + node.mNodeName);
 					node.input(name, type, data, length, timestamp);
 				}
 			} else {
 				ResultData result = getParameterizedResult(parameter, name, type, data, length, timestamp);
 				if (result != null) {
 					for (DataFlowNode node: nodeList) {
+						DebugHelper.log(mSimpleNodeName, mNodeName + " -> " + node.mNodeName);
 						node.input(result.name, result.type, result.data, result.length, result.timestamp);
 					}
 				}
@@ -499,12 +501,12 @@ public abstract class DataFlowNode {
 		return false;
 	}
 	
-	public void reconnect(DataFlowNode node) {
+	/*public void reconnect(DataFlowNode node) {
 		mOutPortMap = node.getOutPortMap();
 		mOutPortParameterMap = node.getOutPortParameterMap();
 		mPullPortMap = node.getPullPortMap();
 		mParentList = node.getParentList();
-	}
+	}*/
 	
 	public Map<String, LinkedList<DataFlowNode>> getOutPortMap() {
 		return mOutPortMap;

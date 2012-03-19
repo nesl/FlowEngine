@@ -67,7 +67,7 @@ public class IERatio extends DataFlowNode {
 
 		int[] ieRatio = calculateIERatio((int[])inputData, length);
 		
-		output(name + "IERatio", "int[]", ieRatio, ieRatio.length, timestamp);
+		output(name.replace("PeakValley", "IERatio"), "int[]", ieRatio, ieRatio.length, timestamp);
 	}
 	
 }

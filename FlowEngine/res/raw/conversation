@@ -1,0 +1,80 @@
+BEGIN DECLARE
+Conversation conversation
+
+RIP rip
+Buffer ripBuffer(1071,56)
+Sort ripSort
+PeakValley peakValley(17.86,60.0)
+Percentile ripPercentile
+
+IERatio ieRatio
+Mean ieRatioMean
+Sort ieRatioSort
+Median ieRatioMedian
+
+Inhalation inhalation
+Mean inhalationMean
+Variance inhalationVariance
+StandardDeviation inhalationStdev
+Sort inhalationSort
+Percentile inhalationPercentile
+
+Exhalation exhalation
+Mean exhalationMean
+
+Stretch stretch
+Mean stretchMean
+Variance stretchVariance
+StandardDeviation stretchStdev
+
+BreathingDuration bd
+Mean bdMean
+Sort bdSort
+NthBest bdNthBest
+END
+
+BEGIN CONNECT
+rip -> ripBuffer
+ripBuffer -> ripSort
+ripPercentile => ripSort
+ripBuffer -> peakValley
+ripBuffer -> stretch
+ripBuffer -> bd
+
+peakValley => ripPercentile
+peakValley -> ieRatio
+peakValley -> inhalation
+peakValley -> exhalation
+peakValley -> stretch
+peakValley -> bd
+
+ieRatio -> ieRatioSort
+ieRatio -> ieRatioMean
+ieRatioSort -> ieRatioMedian
+ieRatioMedian -> conversation
+ieRatioMean -> conversation
+
+inhalation -> inhalationMean
+inhalation -> inhalationVariance
+inhalation -> inhalationSort
+inhalationMean -> inhalationVariance
+inhalationVariance -> inhalationStdev
+inhalationStdev -> conversation
+inhalationSort -> inhalationPercentile
+inhalationPercentile -(90.0)-> conversation
+
+exhalation -> exhalationMean
+exhalationMean -> conversation 
+
+stretch -> stretchMean
+stretch -> stretchVariance
+stretchMean -> stretchVariance
+stretchVariance -> stretchStdev
+stretchStdev -> conversation
+
+bd -> bdMean
+bdMean -> conversation
+bd -> bdSort
+bdSort -> bdNthBest
+bdNthBest -(2)-> conversation
+END

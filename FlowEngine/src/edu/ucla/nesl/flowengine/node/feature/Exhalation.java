@@ -66,7 +66,7 @@ public class Exhalation extends DataFlowNode {
 		
 		int[] result = getExhalation((int[])inputData, length);
 		
-		output(name + "Exhalation", "int[]", result, result.length, timestamp);
+		output(name.replace("PeakValley", "Exhalation"), "int[]", result, result.length, timestamp);
 	}
 
 }

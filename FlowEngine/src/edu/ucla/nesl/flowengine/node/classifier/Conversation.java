@@ -59,28 +59,28 @@ public class Conversation extends DataFlowNode {
 		}
 		mLastTime = mCurTime;
 
-		if (name.contains("InhalationPercentile90.0")) {
+		if (name.contains("RIPInhalationPercentile90.0")) {
 			mFeatures[INDEX_PERCENTILE90_INHALATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_PERCENTILE90_INHALATION;
-		} else if (name.contains("InhalationStandardDeviation")) {
+		} else if (name.contains("RIPInhalationStandardDeviation")) {
 			mFeatures[INDEX_STDEV_INHALATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_STDEV_INHALATION;
-		} else if (name.contains("ExhalationMean")) {
+		} else if (name.contains("RIPExhalationMean")) {
 			mFeatures[INDEX_MEAN_EXHALATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_MEAN_EXHALATION;
-		} else if (name.contains("IERatioMean")) {
+		} else if (name.contains("RIPIERatioMean")) {
 			mFeatures[INDEX_MEAN_IERATIO] = (Double)inputData;
 			mFeatureBitVector |= BIT_MEAN_IERATIO;
-		} else if (name.contains("IERatioMedian")) {
+		} else if (name.contains("RIPIERatioMedian")) {
 			mFeatures[INDEX_MEDIAN_IERATIO] = (Double)inputData;
 			mFeatureBitVector |= BIT_MEDIAN_IERATIO;
-		} else if (name.contains("BreathingDurationMean")) {
+		} else if (name.contains("RIPBreathingDurationMean")) {
 			mFeatures[INDEX_MEAN_BREATHINGDURATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_MEAN_BREATHINGDURATION;
-		} else if (name.contains("BreathingDurationNthBest2")) {
+		} else if (name.contains("RIPBreathingDurationNthBest2")) {
 			mFeatures[INDEX_SECONDBEST_BREATHINGDURATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_SECONDBEST_BREATHINGDURATION;
-		} else if (name.contains("StretchStandardDeviation")) {
+		} else if (name.contains("RIPStretchStandardDeviation")) {
 			mFeatures[INDEX_STDEV_STRETCH] = (Double)inputData;
 			mFeatureBitVector |= BIT_STDEV_STRETCH;
 		}

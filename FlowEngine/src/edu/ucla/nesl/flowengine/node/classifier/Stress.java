@@ -112,43 +112,43 @@ public class Stress extends DataFlowNode {
 		}
 		mLastTime = mCurTime;
 
-		if (name.contains("Ventilation")) {
+		if (name.contains("RIPVentilation")) {
 			mFeatures[INDEX_VENTILATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_VENTILATION;
-		} else if (name.contains("InhalationMean")) {
+		} else if (name.contains("RIPInhalationMean")) {
 			mFeatures[INDEX_MEAN_INHALATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_MEAN_INHALATION;
-		} else if (name.contains("ExhalationQuartileDeviation")) {
+		} else if (name.contains("RIPExhalationQuartileDeviation")) {
 			mFeatures[INDEX_QD_EXHALATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_QD_EXHALATION;
-		} else if (name.contains("RespirationQuartileDeviation")) {
+		} else if (name.contains("RIPRespirationQuartileDeviation")) {
 			mFeatures[INDEX_QD_RESPIRATION] = (Double)inputData;
 			mFeatureBitVector |= BIT_QD_RESPIRATION;
-		} else if (name.contains("IERatioMedian")) {
+		} else if (name.contains("RIPIERatioMedian")) {
 			mFeatures[INDEX_MEDIAN_IERATIO] = (Double)inputData;
 			mFeatureBitVector |= BIT_MEDIAN_IERATIO;
-		} else if (name.contains("StretchMedian")) {
+		} else if (name.contains("RIPStretchMedian")) {
 			mFeatures[INDEX_MEDIAN_STRETCH] = (Double)inputData;
 			mFeatureBitVector |= BIT_MEDIAN_STRETCH;
-		} else if (name.contains("StretchQuartileDeviation")) {
+		} else if (name.contains("RIPStretchQuartileDeviation")) {
 			mFeatures[INDEX_QD_STRETCH] = (Double)inputData;
 			mFeatureBitVector |= BIT_QD_STRETCH;
-		} else if (name.contains("StretchPercentile80.0")) {
+		} else if (name.contains("RIPStretchPercentile80.0")) {
 			mFeatures[INDEX_PERCENTILE80_STRETCH] = (Double)inputData;
 			mFeatureBitVector |= BIT_PERCENTILE80_STRETCH;
-		} else if (name.contains("LombPeriodogramBandPower0.1-0.2")) {
+		} else if (name.contains("ECGRRIntervalLombPeriodogramBandPower0.1-0.2")) {
 			mFeatures[INDEX_POWER12_LOMB_RR] = (Double)inputData;
 			mFeatureBitVector |= BIT_POWER12_LOMB_RR;
-		} else if (name.contains("RRIntervalMean")) {
+		} else if (name.contains("ECGRRIntervalMean")) {
 			mFeatures[INDEX_MEAN_RR] = (Double)inputData;
 			mFeatureBitVector |= BIT_MEAN_RR;
-		} else if (name.contains("RRIntervalMedian")) {
+		} else if (name.contains("ECGRRIntervalMedian")) {
 			mFeatures[INDEX_MEDIAN_RR] = (Double)inputData;
 			mFeatureBitVector |= BIT_MEDIAN_RR;
-		} else if (name.contains("RRIntervalQuartileDeviation")) {
+		} else if (name.contains("ECGRRIntervalQuartileDeviation")) {
 			mFeatures[INDEX_QD_RR] = (Double)inputData;
 			mFeatureBitVector |= BIT_QD_RR;
-		} else if (name.contains("RRIntervalPercentile80.0")) {
+		} else if (name.contains("ECGRRIntervalPercentile80.0")) {
 			mFeatures[INDEX_PERCENTILE80_RR] = (Double)inputData;
 			mFeatureBitVector |= BIT_PERCENTILE80_RR;
 		}
