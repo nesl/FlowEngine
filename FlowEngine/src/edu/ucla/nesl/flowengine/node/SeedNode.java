@@ -3,6 +3,7 @@ package edu.ucla.nesl.flowengine.node;
 import java.util.Map;
 
 import android.os.RemoteException;
+import android.util.Log;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.Device;
 import edu.ucla.nesl.flowengine.Sensor;
@@ -93,7 +94,10 @@ public class SeedNode extends DataFlowNode {
 			DebugHelper.log(TAG, name + " " + length + " samples");
 		} else if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BATTERY))) {
 			DebugHelper.log(TAG, name + ": " + (Integer)data);
-		} 
+		} else if (name.equals(SensorType.getSensorName(SensorType.PHONE_GPS))) {
+			double[] gpsdata = (double[])data;
+			DebugHelper.log(TAG, name + ": " + gpsdata[0] + ", " + gpsdata[1] + ", " + gpsdata[2] + ", " + gpsdata[3]);
+		}
 		
 		output(name, type, data, length, timestamp);
 	}

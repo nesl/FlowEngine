@@ -1,10 +1,12 @@
 package edu.ucla.nesl.flowengine.node;
 
 import android.os.RemoteException;
+import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.aidl.ApplicationInterface;
 
 public class Publish extends DataFlowNode {
-
+	private static final String TAG = Publish.class.getSimpleName();
+	
 	ApplicationInterface mAppInterface;
 	
 	public Publish(ApplicationInterface appInterface) {

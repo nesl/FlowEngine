@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="hello">Hello World, DataLoggerActivity!</string>
+    <string name="app_name">DataLogger</string>
+    <string name="nodata">No data yet.</string>
+
+</resources>

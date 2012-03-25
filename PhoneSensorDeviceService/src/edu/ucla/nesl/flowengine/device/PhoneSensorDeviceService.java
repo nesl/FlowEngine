@@ -254,7 +254,6 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		stopGPS();
 		stopBattery();
 		
-		
 		try {
 			mAPI.removeDevice(mDeviceID);
 		} catch (Throwable t) {
