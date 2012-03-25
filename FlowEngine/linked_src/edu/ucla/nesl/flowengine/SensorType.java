@@ -23,6 +23,12 @@ public class SensorType {
 	public static final String ZEPHYR_BATTERY_NAME = "ZephyrBattery";
 	public static final String ZEPHYR_BUTTON_WORN_NAME = "ZephyrButtonWorn";
 
+	public static final String ACTIVITY_CONTEXT_NAME = "Activity";
+	public static final String STRESS_CONTEXT_NAME = "Stress";
+	public static final String CONVERSATION_CONTEXT_NAME = "Conversation";
+	public static final String MOTION_CONTEXT_NAME = "Motion";
+	public static final String OUTDOOR_CONTEXT_NAME = "Outdoor";
+	
 	private SensorType() {}
 
 	public static String getSensorName(int sensor) {

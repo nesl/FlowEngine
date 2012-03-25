@@ -12,45 +12,52 @@ import edu.ucla.nesl.flowengine.SensorType;
 public class SeedNode extends DataFlowNode {
 	private static final String TAG = SeedNode.class.getSimpleName();
 
-	private int mSensorType;
+	private int mSensorID;
 	private Device mAttachedDevice;
 
-	public SeedNode(String simpleNodeName, int sensorType, Device attachedDevice) {
+	public SeedNode(String simpleNodeName, int sensorID, Device attachedDevice) {
 		super(simpleNodeName);
-		mSensorType = sensorType;
+		mSensorID = sensorID;
 		mAttachedDevice = attachedDevice;
 	}
 
-	@Override
-	protected String processParentNodeName(String parentNodeName) {
-		return "";
-	}
-	
 	public void configureNodeName(Map<String, DataFlowNode> nodeNameMap) {
 		configurePushNodeName(nodeNameMap, null);
 	}
 
+	public int getSensorID() {
+		return mSensorID;
+	}
+	
 	public Sensor getSensor() {
-		return mAttachedDevice.getSensor(mSensorType);
+		return mAttachedDevice.getSensor(mSensorID);
 	}
 	
 	public Device getAttachedDevice() {
 		return mAttachedDevice;
 	}
 	
-	public void initializeGraph() {
+	/*public void initializeGraph() {
 		super.initializeGraph(null);
-	}
+	}*/
 	
 	public void attachDevice(Device device) {
 		mAttachedDevice = device;
 	}
+	
+	public void detachDevice() {
+		mAttachedDevice = null;
+	}
 
 	@Override
 	public void startSensor() {
-		DebugHelper.log(TAG, "Starting mSensorType: " + mSensorType + ", mAttachedDevice: " + mAttachedDevice);
+		DebugHelper.log(TAG, "Starting mSensorType: " + mSensorID + ", mAttachedDevice: " + mAttachedDevice);
+		if (mAttachedDevice == null) {
+			DebugHelper.log(TAG, "Device not attached yet.");
+			return;
+		}
 		try {
-			mAttachedDevice.getInterface().startSensor(mSensorType);
+			mAttachedDevice.getInterface().startSensor(mSensorID);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -58,9 +65,13 @@ public class SeedNode extends DataFlowNode {
 	
 	@Override
 	public void stopSensor() {
-		DebugHelper.log(TAG, "Stopping mSensorType: " + mSensorType + ", mAttachedDevice: " + mAttachedDevice);
+		DebugHelper.log(TAG, "Stopping mSensorType: " + mSensorID + ", mAttachedDevice: " + mAttachedDevice);
+		if (mAttachedDevice == null) {
+			DebugHelper.log(TAG, "Device not attached yet.");
+			return;
+		}
 		try {
-			mAttachedDevice.getInterface().stopSensor(mSensorType);
+			mAttachedDevice.getInterface().stopSensor(mSensorID);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -72,11 +83,17 @@ public class SeedNode extends DataFlowNode {
 		if (type.equals("String")) {
 			DebugHelper.log(TAG, (String)data);
 		}
-		/*if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BATTERY))) {
-			DebugHelper.log(TAG, name + ": " + (Integer)data);
+		/*
 		} else if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BUTTON_WORN))) {
 			DebugHelper.log(TAG, name + ": " + (Integer)data);
 		}*/
+		if (name.equals(SensorType.getSensorName(SensorType.ECG))){
+			DebugHelper.log(TAG, name + " " + length + " samples");
+		} else if (name.equals(SensorType.getSensorName(SensorType.RIP))){
+			DebugHelper.log(TAG, name + " " + length + " samples");
+		} else if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BATTERY))) {
+			DebugHelper.log(TAG, name + ": " + (Integer)data);
+		} 
 		
 		output(name, type, data, length, timestamp);
 	}

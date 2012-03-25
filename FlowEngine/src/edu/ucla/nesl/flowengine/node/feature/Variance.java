@@ -17,10 +17,10 @@ public class Variance extends DataFlowNode {
 
 	@Override
 	protected String processParentNodeName(String parentNodeName) {
-		if (parentNodeName.contains("Mean")) {
-			return parentNodeName.replace("Mean", "");
-		} else if (parentNodeName.contains("Buffer")) {
-			return parentNodeName.split("Buffer")[0];
+		if (parentNodeName.contains("|Mean")) {
+			return parentNodeName.replace("|Mean", "");
+		} else if (parentNodeName.contains("|Buffer")) {
+			return parentNodeName.split("\\|Buffer")[0];
 		}
 		return parentNodeName;
 	}

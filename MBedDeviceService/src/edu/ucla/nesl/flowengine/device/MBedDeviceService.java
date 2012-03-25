@@ -88,7 +88,7 @@ public class MBedDeviceService extends Service implements Runnable {
 				
 				try {
 					if (mAPI != null) {
-						mAPI.pushInt(mDeviceID, SensorType.EXTERNAL_ACCELEROMETER, 0, 0, 0);
+						mAPI.pushInt(mDeviceID, SensorType.EXTERNAL_ACCELEROMETER, 0, 0);
 					} else {
 						notify.showNotificationNow("mAPI is null..");
 					}

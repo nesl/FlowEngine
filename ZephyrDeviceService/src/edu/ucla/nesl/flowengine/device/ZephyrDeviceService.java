@@ -183,9 +183,9 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	    			int buttonWorn = receivedBytes[41] & 0xFF; 
 	    			try {
 	    				//sample interval: 1s
-						mAPI.pushInt(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, 0, timestamp);
-						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BATTERY, battery, 0, timestamp);
-						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, buttonWorn, 0, timestamp);
+						mAPI.pushInt(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, timestamp);
+						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BATTERY, battery, timestamp);
+						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, buttonWorn, timestamp);
 					} catch (RemoteException e) {
 						e.printStackTrace();
 						if (isRestartFlowEngineOnRemoteException)
@@ -357,7 +357,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		}
 		mSocket = null;
 		mIsStopRequest = false;
-		Log.d(TAG, "Receive thrad stopped.");
+		mReceiveThread = null;
+		Log.d(TAG, "Receive thread stopped.");
 	}
 
 	private void stop() {
@@ -412,11 +413,11 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	private DeviceAPI.Stub mZephyrDeviceInterface = new DeviceAPI.Stub() {
 		@Override
 		public void start() throws RemoteException {
-			mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP));
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_START));
 		}
 		@Override
 		public void stop() throws RemoteException {
-			mHandler.sendMessage(mHandler.obtainMessage(MSG_START));
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP));
 		}
 		@Override
 		public void kill() throws RemoteException {
@@ -428,8 +429,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		}
 		@Override
 		public void stopSensor(int sensor) throws RemoteException {
-			//mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP));
 			//TODO: individual sensor stop.
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP));
 		}
 	};
 	
@@ -447,7 +448,6 @@ public class ZephyrDeviceService extends Service implements Runnable {
 				mAPI.addSensor(mDeviceID, SensorType.SKIN_TEMPERATURE, 1000);
 				mAPI.addSensor(mDeviceID, SensorType.ZEPHYR_BATTERY, -1);
 				mAPI.addSensor(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, -1);
-				start();
 			} catch (RemoteException e) {
 				Log.e(TAG, "Failed to add device..", e);
 				if (isRestartFlowEngineOnRemoteException)
@@ -513,10 +513,11 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		
 		try {
 			mAPI.removeDevice(mDeviceID);
-			unbindService(mServiceConnection);
 		} catch (Throwable t) {
 			Log.w(TAG, "Failed to unbind from the service", t);
 		}
+
+		unbindService(mServiceConnection);
 
 		super.onDestroy();
 	}

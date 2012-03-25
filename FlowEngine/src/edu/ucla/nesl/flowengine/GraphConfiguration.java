@@ -9,481 +9,133 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
-import android.hardware.SensorManager;
 import edu.ucla.nesl.flowengine.node.ActivityGraphControl;
 import edu.ucla.nesl.flowengine.node.Buffer;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 import edu.ucla.nesl.flowengine.node.Publish;
 import edu.ucla.nesl.flowengine.node.SeedNode;
 import edu.ucla.nesl.flowengine.node.classifier.Activity;
-import edu.ucla.nesl.flowengine.node.classifier.Conversation;
 import edu.ucla.nesl.flowengine.node.classifier.Motion;
-import edu.ucla.nesl.flowengine.node.classifier.Outdoor;
-import edu.ucla.nesl.flowengine.node.classifier.Stress;
-import edu.ucla.nesl.flowengine.node.feature.BandPower;
-import edu.ucla.nesl.flowengine.node.feature.BreathingDuration;
-import edu.ucla.nesl.flowengine.node.feature.Exhalation;
-import edu.ucla.nesl.flowengine.node.feature.FFT;
-import edu.ucla.nesl.flowengine.node.feature.IERatio;
-import edu.ucla.nesl.flowengine.node.feature.Inhalation;
-import edu.ucla.nesl.flowengine.node.feature.LombPeriodogram;
-import edu.ucla.nesl.flowengine.node.feature.Mean;
-import edu.ucla.nesl.flowengine.node.feature.Median;
-import edu.ucla.nesl.flowengine.node.feature.NthBest;
-import edu.ucla.nesl.flowengine.node.feature.Percentile;
-import edu.ucla.nesl.flowengine.node.feature.QuartileDeviation;
-import edu.ucla.nesl.flowengine.node.feature.RRInterval;
-import edu.ucla.nesl.flowengine.node.feature.PeakValley;
-import edu.ucla.nesl.flowengine.node.feature.Respiration;
-import edu.ucla.nesl.flowengine.node.feature.RootMeanSquare;
-import edu.ucla.nesl.flowengine.node.feature.StandardDeviation;
-import edu.ucla.nesl.flowengine.node.feature.Stretch;
-import edu.ucla.nesl.flowengine.node.feature.Variance;
-import edu.ucla.nesl.flowengine.node.feature.Ventilation;
-import edu.ucla.nesl.flowengine.node.operation.Scale;
-import edu.ucla.nesl.flowengine.node.operation.Sort;
 
 public class GraphConfiguration {
 	private static final String TAG = GraphConfiguration.class.getSimpleName();
 	
 	private Map<Integer, SeedNode> mSeedNodeMap;
-	private Map<String, DataFlowNode> mNodeNameMap = new HashMap<String, DataFlowNode>();
+	private Map<String, DataFlowNode> mNodeNameMap;
 	
-	private boolean mIsStress = false;
-	private boolean mIsConversation = false;
-	private boolean mIsActivity = false;
-	private boolean mIsPhoneBattery = false;
-	private boolean mIsPhoneGPS = false;
-	private boolean mIsZephyrBattery = false;
-	private boolean mIsZephyrButtonWorn = false;
+	private boolean mIsStressGraphConfigured = false;
+	private boolean mIsConversationGraphConfigured = false;
+	private boolean mIsActivityGraphConfigured = false;
 
 	private static final int STATUS_DEFAULT = 0;
 	private static final int STATUS_DECLARE = 1;
 	private static final int STATUS_CONNECT = 2;
+	
 	private static final String classNamePrefix = "edu.ucla.nesl.flowengine.node.";
 	private static final String classNameClassifierPrefix = "edu.ucla.nesl.flowengine.node.classifier.";
 	private static final String classNameFeaturePrefix = "edu.ucla.nesl.flowengine.node.feature.";
 	private static final String classNameOperationPrefix = "edu.ucla.nesl.flowengine.node.operation.";
 
-	public GraphConfiguration(Map<Integer, SeedNode> seedNodeMap) {
+	public GraphConfiguration(Map<Integer, SeedNode> seedNodeMap, Map<String, DataFlowNode> nodeNameMap) {
 		mSeedNodeMap = seedNodeMap;
+		mNodeNameMap = nodeNameMap;
 	}
 	
-	public void configureApplication(Application app) {
-		DebugHelper.log(TAG, "configure..");
-		ArrayList<String> nodeNames = app.getSubscribedNodeNames();
-		Publish publish = new Publish(app.getApplicationInterface());
-		for (String nodeName: nodeNames) {
-			if (nodeName.equals("Activity")) {
-				//configureActivity(publish);
-			} else if (nodeName.equals("StressConversation")) {
-				//configureStressConversation(publish);
-			} else if (nodeName.equals("PhoneBattery")) {
-				configurePhoneBattery(publish);
-			} else if (nodeName.equals("PhoneGPS")) {
-				configurePhoneGPS(publish);
-			} else if (nodeName.equals("ZephyrBattery")) {
-				configureZephyrBattery(publish);
-			} else if (nodeName.equals("ZephyrButtonWorn")) {
-				configureZephyrButtonWorn(publish);
+	public void subscribe(Application app, String nodeName) {
+		Publish publish = app.getPublishNode();
+		DataFlowNode node = mNodeNameMap.get("|" + nodeName);
+		if (node == null) {
+			configureGraph(nodeName);
+			node = mNodeNameMap.get("|" + nodeName);
+			if (node == null) {
+				throw new UnsupportedOperationException("node is null.");
 			}
 		}
+		DebugHelper.log(TAG, "node = " + node);
+		node.addOutputNode(publish);
+		node.enable();
 	}
 	
-	private boolean configureZephyrButtonWorn(Publish publish) {
-		if (mIsZephyrButtonWorn) {
-			return true;
-		}
+	public void removeApplication(Application removedApp) {
+		// remove Publish node for this app.
+		Publish node = removedApp.getPublishNode();
+		node.remove(mNodeNameMap, mSeedNodeMap);
 
-		SeedNode zephyrWorn = mSeedNodeMap.get(SensorType.ZEPHYR_BUTTON_WORN);
-		if (zephyrWorn != null) {
-			mIsZephyrButtonWorn = true;
-			zephyrWorn.addOutputNode(publish);
-			zephyrWorn.startSensor();
-			return true;
-		}
-		return false;
-	}
-
-	private boolean configureZephyrBattery(Publish publish) {
-		if (mIsZephyrBattery) {
-			return true;
+		// change flags
+		ArrayList<String> nodeNames = removedApp.getSubscribedNodeNames();
+		for (String nodeName: nodeNames) {
+			if (nodeName.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
+				// remove ActivityGraphControl node
+				mNodeNameMap.get("|ActivityGraphControl").remove(mNodeNameMap, mSeedNodeMap);
+				mIsActivityGraphConfigured = false;
+			} else if (nodeName.equals(SensorType.STRESS_CONTEXT_NAME)) {
+				mIsStressGraphConfigured = false;
+			} else if (nodeName.equals(SensorType.CONVERSATION_CONTEXT_NAME)) {
+				mIsConversationGraphConfigured = false;
+			}
 		}
 		
-		SeedNode zephyrBattery = mSeedNodeMap.get(SensorType.ZEPHYR_BATTERY);
-		if (zephyrBattery != null) {
-			mIsZephyrBattery = true;
-			zephyrBattery.addOutputNode(publish);
-			zephyrBattery.startSensor();
-			return true;
+		// print seed map
+		DebugHelper.log(TAG, "Printing mSeedNodeMap..");
+		for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
+			int sensor = entry.getKey();
+			SeedNode node1 = entry.getValue();
+			DebugHelper.log(TAG, node1.getClass().getName() + ": " + sensor + " device: " + node1.getAttachedDevice());
 		}
-		return false;
-	}
-	
-	private boolean configurePhoneGPS(Publish publish) {
-		if (mIsPhoneGPS) {
-			return true;
+		DebugHelper.log(TAG, "Done.");
+
+		// print node name map
+		DebugHelper.log(TAG, "Printing mNodeNameMap..");
+		for (Map.Entry<String, DataFlowNode> entry: mNodeNameMap.entrySet()) {
+			String nodeName = entry.getKey();
+			DataFlowNode node2 = entry.getValue();
+			DebugHelper.log(TAG, nodeName + ": " + node2.getClass().getName());
 		}
-		
-		SeedNode gps = mSeedNodeMap.get(SensorType.PHONE_GPS);
-		if (gps != null) {
-			mIsPhoneGPS = true;
-			gps.addOutputNode(publish);
-			gps.startSensor();
-			return true;
-		}
-		return false;
+		DebugHelper.log(TAG, "Done.");
 	}
 	
-	private boolean configurePhoneBattery(Publish publish) {
-		if (mIsPhoneBattery) {
-			return true;
+	private void configureGraph(String nodeName) {
+		if (nodeName.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
+			configureActivityGraph();
+		} else if (nodeName.equals(SensorType.STRESS_CONTEXT_NAME)) {
+			configureStressGraph();
+		} else if (nodeName.equals(SensorType.CONVERSATION_CONTEXT_NAME)) {
+			configureConversationGraph();
+		} else {
+			int sensorID = SensorType.getSensorId(nodeName);
+			if (sensorID == -1) {
+				throw new IllegalArgumentException("nodeName: " + nodeName + " cannot be configured.");
+			}
+			SeedNode seed = new SeedNode(nodeName, sensorID, null);
+			mSeedNodeMap.put(sensorID, seed);
+			seed.configureNodeName(mNodeNameMap);
 		}
-		
-		SeedNode batteryNode = mSeedNodeMap.get(SensorType.PHONE_BATTERY);
-		if (batteryNode != null) {
-			mIsPhoneBattery = true;
-			batteryNode.addOutputNode(publish);
-			batteryNode.startSensor();
-			return true;
-		}
-		return false;
 	}
 	
-	/*public void configureActivityTemp() {
-		if (mIsActivity) {
-			return;
+	public void configureActivityGraph() {
+		if (!mIsActivityGraphConfigured) {
+			configureGraph(R.raw.activity);
+			mIsActivityGraphConfigured = true;
 		}
-		
-		//SeedNode accelerometer = mSeedNodeMap.get(SensorType.CHEST_ACCELEROMETER);
-		SeedNode accelerometer = mSeedNodeMap.get(SensorType.PHONE_ACCELEROMETER);
-		SeedNode gps = mSeedNodeMap.get(SensorType.PHONE_GPS);
-		
-		if (accelerometer == null || gps == null) {
-			return;
-		}
-
-		mIsActivity = true;
-		DebugHelper.log(TAG, "Configuring activity graph..");
-
-		RootMeanSquare rms = new RootMeanSquare(SensorManager.GRAVITY_EARTH, 1.0);
-		Buffer rmsBuffer = new Buffer(50, accelerometer.getSensor().getSampleInterval());
-		Scale scaledRMS = new Scale(310);
-		FFT scaledFFT1_3 = new FFT(1.0, 3.0, 1.0);
-		FFT scaledFFT4_5 = new FFT(4.0, 5.0, 1.0);
-		Motion motion = new Motion();
-		Outdoor outdoor = new Outdoor();
-		Mean scaledMean = new Mean();
-		Variance scaledVariance = new Variance();
-		Mean mean = new Mean();
-		Variance variance = new Variance();
-		FFT fft1_10 = new FFT(1.0, 10.0, 1.0);
-		Activity activity = new Activity();
-		ActivityGraphControl control = new ActivityGraphControl(motion, gps);
-				
-		accelerometer.addOutputNode(rms);
-		rms.addOutputNode(rmsBuffer);
-		rmsBuffer.addOutputNode(scaledRMS);
-		scaledRMS.addOutputNode(scaledFFT1_3);
-		scaledRMS.addOutputNode(scaledFFT4_5);
-		scaledFFT1_3.addOutputNode(motion);
-		scaledFFT4_5.addOutputNode(motion);
-		motion.addOutputNode(outdoor);
-
-		scaledRMS.addOutputNode(scaledMean);
-		scaledRMS.addOutputNode(scaledVariance);
-		scaledMean.addOutputNode(scaledVariance);
-		rmsBuffer.addOutputNode(mean);
-		rmsBuffer.addOutputNode(variance);
-		mean.addOutputNode(variance);
-		rmsBuffer.addOutputNode(fft1_10);
-		
-		scaledVariance.addOutputNode(activity);
-		scaledFFT1_3.addOutputNode(activity);
-		variance.addOutputNode(activity);
-		fft1_10.addOutputNode(activity);
-		gps.addOutputNode(activity);
-		activity.addOutputNode(outdoor);
-
-		outdoor.addOutputNode(control);
-		
-		// Recursive init from seednode
-		accelerometer.initializeGraph();
-		gps.initializeGraph();
-		
-		accelerometer.startSensor();
 	}
-	*/
-	/*private boolean configureActivity(Publish publish) {
-		if (mIsActivity) {
-			return true;
-		}
-		
-		//SeedNode accelerometer = mSeedNodeMap.get(SensorType.CHEST_ACCELEROMETER);
-		SeedNode accelerometer = mSeedNodeMap.get(SensorType.PHONE_ACCELEROMETER);
-		SeedNode gps = mSeedNodeMap.get(SensorType.PHONE_GPS);
-		
-		if (accelerometer == null || gps == null) {
-			return false;
-		}
-
-		mIsActivity = true;
-		DebugHelper.log(TAG, "Configuring activity graph..");
-
-		RootMeanSquare rms = new RootMeanSquare(SensorManager.GRAVITY_EARTH, 1.0);
-		Buffer rmsBuffer = new Buffer(50, accelerometer.getSensor().getSampleInterval());
-		Scale scaledRMS = new Scale(310);
-		FFT scaledFFT1_3 = new FFT(1.0, 3.0, 1.0);
-		FFT scaledFFT4_5 = new FFT(4.0, 5.0, 1.0);
-		Motion motion = new Motion();
-		Outdoor outdoor = new Outdoor();
-		Mean scaledMean = new Mean();
-		Variance scaledVariance = new Variance();
-		Mean mean = new Mean();
-		Variance variance = new Variance();
-		FFT fft1_10 = new FFT(1.0, 10.0, 1.0);
-		Activity activity = new Activity();
-		ActivityGraphControl control = new ActivityGraphControl(motion, gps);
-				
-		accelerometer.addOutputNode(rms);
-		rms.addOutputNode(rmsBuffer);
-		rmsBuffer.addOutputNode(scaledRMS);
-		scaledRMS.addOutputNode(scaledFFT1_3);
-		scaledRMS.addOutputNode(scaledFFT4_5);
-		scaledFFT1_3.addOutputNode(motion);
-		scaledFFT4_5.addOutputNode(motion);
-		motion.addOutputNode(outdoor);
-
-		scaledRMS.addOutputNode(scaledMean);
-		scaledRMS.addOutputNode(scaledVariance);
-		scaledMean.addOutputNode(scaledVariance);
-		rmsBuffer.addOutputNode(mean);
-		rmsBuffer.addOutputNode(variance);
-		mean.addOutputNode(variance);
-		rmsBuffer.addOutputNode(fft1_10);
-		
-		scaledVariance.addOutputNode(activity);
-		scaledFFT1_3.addOutputNode(activity);
-		variance.addOutputNode(activity);
-		fft1_10.addOutputNode(activity);
-		gps.addOutputNode(activity);
-		activity.addOutputNode(outdoor);
-
-		outdoor.addOutputNode(control);
-		
-		// Recursive init from seednode
-		accelerometer.initializeGraph();
-		gps.initializeGraph();
-		
-		activity.addOutputNode(publish);
-		
-		accelerometer.startSensor();
-		
-		return true;
-	}
-	*/
-	/*private boolean configureStressConversation(Publish publish) {
-		if (mIsStressConversation) {
-			return true;
-		}
-		
-		SeedNode ecg = mSeedNodeMap.get(SensorType.ECG);
-		SeedNode rip = mSeedNodeMap.get(SensorType.RIP);
-
-		if (ecg == null || rip == null) {
-			return false;
-		}
-		mIsStressConversation = true;
-		
-		// Stress classifier
-		Stress stress = new Stress();
-		
-		// RIP sample interval == 56 ms
-		final double RIP_SAMPLE_RATE = 1000.0 / 56.0; // Hz 
-		final double RIP_BUFFER_DURATION = 60; // sec
-		
-		Buffer ripBuffer = new Buffer(1071, rip.getSensor().getSampleInterval()); // 59976 ms
-		//BufferNode ripBuffer = new BufferNode(RIP_SAMPLE_RATE * RIP_BUFFER_DURATION);
-		Sort ripSort = new Sort();
-		Percentile ripPercentile = new Percentile();
-		PeakValley rpv = new PeakValley(RIP_SAMPLE_RATE, RIP_BUFFER_DURATION);
-		IERatio ieratio = new IERatio();
-		Respiration respiration = new Respiration();
-		Stretch stretch = new Stretch();
-		Inhalation inhalation = new Inhalation();
-		Exhalation exhalation = new Exhalation();
-		Ventilation ventilation = new Ventilation();
-		
-		Sort respirationSort = new Sort();
-		Percentile respirationPercentile = new Percentile();
-		QuartileDeviation respirationQD = new QuartileDeviation();
-		Sort ieRatioSort = new Sort();
-		Median ieRatioMedian = new Median();
-		Mean inhaleMean = new Mean();
-		Sort exhaleSort = new Sort();
-		Percentile exhalePercentile = new Percentile();
-		QuartileDeviation exhaleQD = new QuartileDeviation();
-		Sort stretchSort = new Sort();
-		Median stretchMedian = new Median();
-		Percentile stretchPercentile = new Percentile();
-		QuartileDeviation stretchQD = new QuartileDeviation();
-		
-		rip.addOutputNode(ripBuffer);
 	
-		// order is important here because rpv pulls percentile which also pulls sort.
-		ripBuffer.addOutputNode(ripSort);
-		ripBuffer.addOutputNode(rpv);
-		rpv.addPullNode(ripPercentile);
-		ripPercentile.addPullNode(ripSort);
-
-		ripBuffer.addOutputNode(stretch);
-		
-		rpv.addOutputNode(respiration);
-		rpv.addOutputNode(ieratio);
-		rpv.addOutputNode(inhalation);
-		rpv.addOutputNode(exhalation);
-		rpv.addOutputNode(ventilation);
-		rpv.addOutputNode(stretch);
-		
-		respiration.addOutputNode(respirationSort);
-		respirationSort.addOutputNode(respirationPercentile);
-		respirationPercentile.addOutputPort("Percentile75.0", 75.0);
-		respirationPercentile.addOutputPort("Percentile25.0", 25.0);
-		respirationPercentile.addOutputNode("Percentile75.0", respirationQD);
-		respirationPercentile.addOutputNode("Percentile25.0", respirationQD);
-
-		ieratio.addOutputNode(ieRatioSort);
-		ieRatioSort.addOutputNode(ieRatioMedian);
-		inhalation.addOutputNode(inhaleMean);
-		
-		exhalation.addOutputNode(exhaleSort);
-		exhaleSort.addOutputNode(exhalePercentile);
-
-		exhalePercentile.addOutputPort("Percentile75.0", 75.0);
-		exhalePercentile.addOutputPort("Percentile25.0", 25.0);
-		exhalePercentile.addOutputNode("Percentile75.0", exhaleQD);
-		exhalePercentile.addOutputNode("Percentile25.0", exhaleQD);
-		
-		stretch.addOutputNode(stretchSort);
-		stretchSort.addOutputNode(stretchMedian);
-		stretchSort.addOutputNode(stretchPercentile);
-		stretchPercentile.addOutputPort("Percentile75.0", 75.0);
-		stretchPercentile.addOutputPort("Percentile25.0", 25.0);
-		stretchPercentile.addOutputNode("Percentile75.0", stretchQD);
-		stretchPercentile.addOutputNode("Percentile25.0", stretchQD);
-		
-		// ECG sample interval = 4ms
-		//final int ECG_SAMPLE_RATE = 250; // Hz
-		//final int ECG_BUFFER_DURATION = 60; // sec
-		Buffer ecgBuffer = new Buffer(14994, ecg.getSensor().getSampleInterval()); // 59976 ms
-		//BufferNode ecgBuffer = new BufferNode(ECG_SAMPLE_RATE * ECG_BUFFER_DURATION);
-		RRInterval rrInterval = new RRInterval();
-		Sort rrSort = new Sort();
-		Median rrMedian = new Median();
-		Percentile rrPercentile = new Percentile();
-		QuartileDeviation rrQD = new QuartileDeviation();
-		Mean rrMean = new Mean();
-		Variance rrVariance = new Variance();
-		LombPeriodogram lomb = new LombPeriodogram();
-		BandPower lombBandPower = new BandPower(0.1, 0.2);
-		
-		ecg.addOutputNode(ecgBuffer);
-		ecgBuffer.addOutputNode(rrInterval);
-		
-		rrInterval.addOutputNode(rrSort);
-		rrInterval.addOutputNode(lomb);
-		rrInterval.addOutputNode(rrMean);
-		rrInterval.addOutputNode(rrVariance);
-		rrSort.addOutputNode(rrMedian);
-		rrSort.addOutputNode(rrPercentile);
-		rrPercentile.addOutputPort("Percentile75.0", 75.0);
-		rrPercentile.addOutputPort("Percentile25.0", 25.0);
-		rrPercentile.addOutputNode("Percentile75.0", rrQD);
-		rrPercentile.addOutputNode("Percentile25.0", rrQD);
-		rrMean.addOutputNode(rrVariance);
-		rrMean.addOutputNode(lomb);
-		rrVariance.addOutputNode(lomb);
-		lomb.addOutputNode(lombBandPower);
-		
-		respirationQD.addOutputNode(stress);
-		ieRatioMedian.addOutputNode(stress);
-		ventilation.addOutputNode(stress);
-		inhaleMean.addOutputNode(stress);
-		exhaleQD.addOutputNode(stress);
-		stretchMedian.addOutputNode(stress);
-		stretchPercentile.addOutputPort("Percentile80.0", 80.0);
-		stretchPercentile.addOutputNode("Percentile80.0", stress);
-		stretchQD.addOutputNode(stress);
-		rrMedian.addOutputNode(stress);
-		rrPercentile.addOutputPort("Percentile80.0", 80.0);
-		rrPercentile.addOutputNode("Percentile80.0", stress);
-		rrQD.addOutputNode(stress);
-		rrMean.addOutputNode(stress);
-		lombBandPower.addOutputNode(stress);
-
-		ecgBuffer.addSyncedBufferNode(ripBuffer);
-		ripBuffer.addSyncedBufferNode(ecgBuffer);
-		
-		// Conversation classifier
-		Conversation conversation = new Conversation();
-		Mean ieRatioMean = new Mean();
-		Variance inhaleVariance = new Variance();
-		StandardDeviation inhaleStdev = new StandardDeviation();
-		Sort inhaleSort = new Sort();
-		Percentile inhalePercentile = new Percentile();
-		Mean exhaleMean = new Mean();
-		Mean stretchMean = new Mean();
-		Variance stretchVariance = new Variance();
-		StandardDeviation stretchStdev = new StandardDeviation();
-		BreathingDuration bdur = new BreathingDuration();
-		Mean bdMean = new Mean();
-		Sort bdurSort = new Sort();
-		NthBest nbest = new NthBest();
-				
-		ieRatioMedian.addOutputNode(conversation);
-		ieratio.addOutputNode(ieRatioMean);
-		ieRatioMean.addOutputNode(conversation);
-		inhalation.addOutputNode(inhaleVariance);
-		inhaleMean.addOutputNode(inhaleVariance);
-		inhaleVariance.addOutputNode(inhaleStdev);
-		inhaleStdev.addOutputNode(conversation);
-		inhalation.addOutputNode(inhaleSort);
-		inhaleSort.addOutputNode(inhalePercentile);
-		inhalePercentile.addOutputPort("Percentile90.0", 90.0);
-		inhalePercentile.addOutputNode("Percentile90.0", conversation);
-		exhalation.addOutputNode(exhaleMean);
-		exhaleMean.addOutputNode(conversation);
-		stretch.addOutputNode(stretchMean);
-		stretch.addOutputNode(stretchVariance);
-		stretchMean.addOutputNode(stretchVariance);
-		stretchVariance.addOutputNode(stretchStdev);
-		stretchStdev.addOutputNode(conversation);
-		rpv.addOutputNode(bdur);
-		ripBuffer.addOutputNode(bdur);
-		bdur.addOutputNode(bdMean);
-		bdur.addOutputNode(bdurSort);
-		bdurSort.addOutputNode(nbest);
-		bdMean.addOutputNode(conversation);
-		nbest.addOutputPort("NthBest2", 2);
-		nbest.addOutputNode("NthBest2", conversation);
-		
-		// Recursive init from seed nodes
-		ecg.initializeGraph();
-		rip.initializeGraph();
-		
-		stress.addOutputNode(publish);
-		conversation.addOutputNode(publish);
-		
-		// start sensors.
-		ecg.startSensor();
-		rip.startSensor();
-		
-		return true;
+	public void configureStressGraph() {
+		if (!mIsStressGraphConfigured) {
+			configureGraph(R.raw.stress);
+			mIsStressGraphConfigured = true;
+		}
 	}
-	*/
-	
-	private DataFlowNode instantiateNode(String className, String instanceName) {
+
+	public void configureConversationGraph() {
+		if (!mIsConversationGraphConfigured) {
+			configureGraph(R.raw.conversation);
+			mIsConversationGraphConfigured = true;
+		}
+	}
+
+	private DataFlowNode instantiateNode(String className, String instanceName, Map<String, DataFlowNode> instanceNameMap) {
 		Class currentClass;
 		try {
 			currentClass = Class.forName(classNameClassifierPrefix + className);
@@ -517,14 +169,18 @@ public class GraphConfiguration {
 				Class[] parTypes = new Class[args.length + 1];
 				Object[] arglist = new Object[args.length + 1];
 				parTypes[0] = String.class;
-				arglist[0] = className + "(" + split[1];
+				arglist[0] = className + "(" + split[1];  // pass parameterized simple node name for graph merging
+				Pattern integerPattern = Pattern.compile("[-+]?([0-9]*)");
+				Pattern doublePattern = Pattern.compile("([0-9]*)\\.([0-9]*)");
 				for (int i = 0; i < args.length; i++) {
-					if (args[i].contains(".")) {
+					if (integerPattern.matcher(args[i]).matches()) {
+						parTypes[i+1] = Integer.TYPE;
+						arglist[i+1] = Integer.parseInt(args[i]);
+					} else if (doublePattern.matcher(args[i]).matches()) {
 						parTypes[i+1] = Double.TYPE;
 						arglist[i+1] = Double.parseDouble(args[i]);
 					} else {
-						parTypes[i+1] = Integer.TYPE;
-						arglist[i+1] = Integer.parseInt(args[i]);
+						throw new IllegalArgumentException("Wrong parater: " + args[i]);
 					}
 				}
 				Constructor ct;
@@ -532,7 +188,7 @@ public class GraphConfiguration {
 				currentNode = (DataFlowNode)ct.newInstance(arglist);
 			}
 		} catch (IllegalArgumentException e) {
-			DebugHelper.loge(TAG, "IllegalArgumentException");
+			DebugHelper.loge(TAG, "IllegalArgumentException: " + e.getLocalizedMessage());
 			e.printStackTrace();
 			return null;
 		} catch (InstantiationException e) {
@@ -568,7 +224,7 @@ public class GraphConfiguration {
 			if (!left.isPullConnected(right)) {
 				left.addPullNode(right);
 			}
-		} else if (operation.contains("(") && operation.contains(")")) { // process parameterized push port
+		} else if (operation.contains("->") && operation.contains("(") && operation.contains(")")) { // process parameterized push port
 			String portName = operation.split("\\(")[1].split("\\)")[0];
 			Object parameter;
 			if (portName.contains(".")) { 
@@ -587,20 +243,6 @@ public class GraphConfiguration {
 		}
 	}
 	
-	public void configureStressGraph() {
-		if (!mIsStress) {
-			configureGraph(R.raw.stress);
-			mIsStress = true;
-		}
-	}
-
-	public void configureConversationGraph() {
-		if (!mIsConversation) {
-			configureGraph(R.raw.conversation);
-			mIsConversation = true;
-		}
-	}
-
 	private void configureGraph(int configResourceId) {
 		InputStream is = FlowEngine.getInstance().getResources().openRawResource(configResourceId);
 		BufferedReader configFile = new BufferedReader(new InputStreamReader(is));
@@ -660,7 +302,7 @@ public class GraphConfiguration {
 								node = new SeedNode(className, sensorId, null);
 								seedNodeMap.put(sensorId, (SeedNode)node);
 							} else {
-								node = instantiateNode(className, instanceName);
+								node = instantiateNode(className, instanceName, instanceNameMap);
 								if (node == null) {
 									DebugHelper.loge(TAG, "Failed to instantiate a node: " + line);
 									return;
@@ -738,31 +380,61 @@ public class GraphConfiguration {
 		for (Map.Entry<Integer, SeedNode> entry: seedNodeMap.entrySet()) {
 			SeedNode newSeed = entry.getValue();
 			Integer sensor = entry.getKey();
-			newSeed.initializeGraph();
 			SeedNode existingSeedNode = mSeedNodeMap.get(sensor);
 			if (existingSeedNode == null) {
+				//newSeed.initializeGraph();
 				mSeedNodeMap.put(sensor, newSeed);
+			} else {
+				//existingSeedNode.initializeGraph();
 			}
 		}
 
-		// for debugging
+		// handle ActivityGraphControl node
+		ActivityGraphControl agc = (ActivityGraphControl)nodeNameMap.get("|ActivityGraphControl");
+		if (agc != null) {
+			agc = (ActivityGraphControl)mNodeNameMap.get("|ActivityGraphControl");
+			agc.setGpsNode(mSeedNodeMap.get(SensorType.PHONE_GPS));
+			agc.setMotionNode((Motion)mNodeNameMap.get("|Motion"));
+			DebugHelper.log(TAG, "AGC Set!");
+		}
+
+		// sync buffers
+		ArrayList<DataFlowNode> bufferNodes = new ArrayList<DataFlowNode>();
+		for (Map.Entry<String, DataFlowNode> entry: nodeNameMap.entrySet()) {
+			if (entry.getKey().contains("Buffer")) {
+				DebugHelper.log(TAG, "buffer node: " + entry.getKey());
+				bufferNodes.add(mNodeNameMap.get(entry.getKey()));
+			}
+		}
+		if (bufferNodes.size() >= 2) {
+			for (DataFlowNode node1: bufferNodes) {
+				Buffer buffer1 = (Buffer)node1;
+				for (DataFlowNode node2: bufferNodes) {
+					Buffer buffer2 = (Buffer)node2;
+					buffer1.addSyncedBufferNode(buffer2);
+				}
+			}
+		}
+		
+		// print instance name map
 		/*for (Map.Entry<String, DataFlowNode> entry: instanceNameMap.entrySet()) {
 			String instanceName = entry.getKey();
 			DataFlowNode node = entry.getValue();
 			DebugHelper.log(TAG, instanceName + ": " + node.getClass().getName());
 		}*/
 
-		// for debugging
-		/*for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
+		// print seed map
+		for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
 			int sensor = entry.getKey();
 			SeedNode node = entry.getValue();
 			DebugHelper.log(TAG, node.getClass().getName() + ": " + sensor + " device: " + node.getAttachedDevice());
 		}
 
+		// print node name map
 		for (Map.Entry<String, DataFlowNode> entry: mNodeNameMap.entrySet()) {
 			String nodeName = entry.getKey();
 			DataFlowNode node = entry.getValue();
 			DebugHelper.log(TAG, nodeName + ": " + node.getClass().getName());
-		}*/
+		}
 	}
 }

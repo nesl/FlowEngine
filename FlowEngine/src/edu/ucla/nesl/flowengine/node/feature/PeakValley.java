@@ -38,14 +38,14 @@ public class PeakValley extends DataFlowNode {
 
 	@Override
 	protected String processParentNodeName(String parentNodeName) {
-		if (parentNodeName.contains("Buffer")) {
-			return parentNodeName.split("Buffer")[0];
+		if (parentNodeName.contains("|Buffer")) {
+			return parentNodeName.split("\\|Buffer")[0];
 		}
 		return parentNodeName;
 	}
 
-	public PeakValley(String simpleNodeName, double sampleRate, double dataDuration) {
-		super(simpleNodeName);
+	public PeakValley(String parameterizedSimpleNodeName, double sampleRate, double dataDuration) {
+		super(parameterizedSimpleNodeName);
 		SAMPLE_RATE = sampleRate;
 		DATA_DURATION = dataDuration;
 		MIN_NUM_PEAKS_THRESHOLD = (DATA_DURATION / MIN_PEAK_DURATION);

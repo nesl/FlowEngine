@@ -2,13 +2,14 @@ package edu.ucla.nesl.flowengine.node.classifier;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
+import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Conversation extends DataFlowNode {
 	private static final String TAG = Conversation.class.getSimpleName();
 
-	private final static int SPEAKING = 1;
 	private final static int QUIET = 0;
+	private final static int SPEAKING = 1;
 	private final static int SMOKING = 2;
 
 	private static final int mRoundingMultiplier = 10000;
@@ -44,6 +45,18 @@ public class Conversation extends DataFlowNode {
 	
 	private boolean isAllFeature() {
 		return mFeatureBitVector == 0xFF; 
+	}
+	
+	private String getClassString(int conversation) {
+		switch (conversation) {
+		case QUIET:
+			return "Quiet";
+		case SPEAKING:
+			return "Speaking";
+		case SMOKING:
+			return "Smoking";
+		}
+		return "Unknown";
 	}
 
 	@Override
@@ -94,7 +107,7 @@ public class Conversation extends DataFlowNode {
 			mFeatures[4] = mFeatures[4] / mRoundingMultiplier;
 			int conversation = getConversationClassification(mFeatures[0], mFeatures[1], mFeatures[2], mFeatures[3], mFeatures[4], mFeatures[5], mFeatures[6], mFeatures[7]);
 			DebugHelper.log(TAG, "conversation: " + conversation);
-			output("Conversation", "int", conversation, 0, timestamp);
+			output(SensorType.CONVERSATION_CONTEXT_NAME, "String", getClassString(conversation), 0, timestamp);
 			clearFeatureBitVector();
 			
 			synchronized (DebugHelper.lock){

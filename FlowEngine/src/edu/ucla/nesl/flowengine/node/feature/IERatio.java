@@ -12,8 +12,8 @@ public class IERatio extends DataFlowNode {
 
 	@Override
 	protected String processParentNodeName(String parentNodeName) {
-		if (parentNodeName.contains("PeakValley")) {
-			return parentNodeName.split("PeakValley")[0];
+		if (parentNodeName.contains("|PeakValley")) {
+			return parentNodeName.split("\\|PeakValley")[0];
 		}
 		return parentNodeName;
 	}

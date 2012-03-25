@@ -2,6 +2,7 @@ package edu.ucla.nesl.flowengine.node.classifier;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
+import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Stress extends DataFlowNode {
@@ -98,6 +99,13 @@ public class Stress extends DataFlowNode {
 		return str;
 	}
 	
+	private String getClassString(boolean isStress) {
+		if (isStress) {
+			return "Stress";
+		}
+		return "No stress";
+	}
+	
 	@Override
 	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (!type.equals("double")) {
@@ -162,7 +170,7 @@ public class Stress extends DataFlowNode {
 		if (isAllFeature()) {
 			boolean isStress = getStressPredictionSVM(mFeatures);
 			DebugHelper.log(TAG, "isStress: " + isStress);
-			output("Stress", "boolean", isStress, 0, timestamp);
+			output(SensorType.STRESS_CONTEXT_NAME, "String", getClassString(isStress), 0, timestamp);
 			clearFeatureBitVector();
 			
 			synchronized (DebugHelper.lock){

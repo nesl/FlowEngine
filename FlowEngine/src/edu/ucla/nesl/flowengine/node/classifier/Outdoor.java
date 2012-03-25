@@ -3,6 +3,7 @@ package edu.ucla.nesl.flowengine.node.classifier;
 import java.util.LinkedList;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Outdoor extends DataFlowNode {
@@ -63,16 +64,16 @@ public class Outdoor extends DataFlowNode {
 	
 	@Override
 	protected void processInput(String name, String type, Object data, int length, long timestamp) {
-		if (name.contains("Motion")) {
+		if (name.contains(SensorType.MOTION_CONTEXT_NAME)) {
 			int result = determineOutdoor((Boolean)data);
 			if (result == OUTDOOR) {
-				output("Outdoor", "boolean", true, 0, timestamp);
+				output(SensorType.OUTDOOR_CONTEXT_NAME, "boolean", true, 0, timestamp);
 			}
-		} else if (name.contains("Activity")) {
+		} else if (name.contains(SensorType.ACTIVITY_CONTEXT_NAME)) {
 			String activity = (String)data;
 			int result = determineIndoor(activity);
 			if (result == INDOOR) {
-				output("Indoor", "boolean", true, 0, timestamp);
+				output(SensorType.OUTDOOR_CONTEXT_NAME, "boolean", false, 0, timestamp);
 			}
 		}
 	}

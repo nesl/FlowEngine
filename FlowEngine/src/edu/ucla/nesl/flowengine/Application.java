@@ -8,22 +8,19 @@ import edu.ucla.nesl.flowengine.node.Publish;
 public class Application {
 	private ApplicationInterface mAppInterface;
 	private ArrayList<String> mSubscribedNodeNames = new ArrayList<String>();
-	private ArrayList<Publish> mPublishNodes = new ArrayList<Publish>();
+	private Publish mPublishNode;
 	
 	public Application(ApplicationInterface appInterface) {
 		mAppInterface = appInterface;
+		mPublishNode = new Publish(mAppInterface);
 	}
 	
 	public void addSubscribedNodeNames(String nodeName) {
 		mSubscribedNodeNames.add(nodeName);
 	}
 	
-	public void addPublishNodes(Publish publishNode) {
-		mPublishNodes.add(publishNode);
-	}
-	
-	public ArrayList<Publish> getPublishNodes() {
-		return mPublishNodes;
+	public Publish getPublishNode() {
+		return mPublishNode;
 	}
 	
 	public ArrayList<String> getSubscribedNodeNames() {

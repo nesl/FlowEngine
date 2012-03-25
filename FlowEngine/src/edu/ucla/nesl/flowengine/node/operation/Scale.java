@@ -10,14 +10,14 @@ public class Scale extends DataFlowNode {
 	
 	@Override
 	protected String processParentNodeName(String parentNodeName) {
-		if (parentNodeName.contains("Buffer")) {
-			return parentNodeName.split("Buffer")[0];
+		if (parentNodeName.contains("|Buffer")) {
+			return parentNodeName.split("\\|Buffer")[0];
 		}
 		return parentNodeName;
 	}
 
-	public Scale(String simpleNodeName, double scale) {
-		super(simpleNodeName);
+	public Scale(String parameterizedSimpleNodeName, double scale) {
+		super(parameterizedSimpleNodeName);
 		mScale = scale;
 	}
 	
@@ -33,7 +33,7 @@ public class Scale extends DataFlowNode {
 			scaleData[i] = oriData[i] * mScale;
 		}
 		
-		DebugHelper.dump(TAG, scaleData);
+		//DebugHelper.dump(TAG, scaleData);
 		output(name + String.format("Scale%.1f", mScale), "double[]", scaleData, length, timestamp);
 	}
 }

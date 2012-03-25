@@ -1,0 +1,43 @@
+BEGIN DECLARE
+PhoneAccelerometer acc
+PhoneGPS gps
+RootMeanSquare rms(9.80665,1.0)
+Buffer buffer(50,-1)
+Scale scale(310.0)
+FFT scaledFFT4_5(4.0,5.0,1.0)
+FFT scaledFFT1_3(1.0,3.0,1.0)
+Mean rmsScaledMean
+Variance rmsScaledVariance
+FFT fft1_10(1.0,10.0,1.0)
+Mean rmsMean
+Variance rmsVariance
+Motion motion
+Activity activity
+Outdoor outdoor
+ActivityGraphControl agc
+END
+
+BEGIN CONNECT
+acc -> rms
+rms -> buffer
+buffer -> scale
+buffer -> fft1_10
+buffer -> rmsVariance
+buffer -> rmsMean
+rmsMean -> rmsVariance
+scale -> scaledFFT4_5
+scale -> scaledFFT1_3
+scale -> rmsScaledVariance
+scale -> rmsScaledMean
+rmsScaledMean -> rmsScaledVariance
+scaledFFT4_5 -> motion
+scaledFFT1_3 -> motion
+scaledFFT1_3 -> activity
+rmsScaledVariance -> activity
+fft1_10 -> activity
+rmsVariance -> activity
+gps -> activity
+motion -> outdoor
+activity -> outdoor
+outdoor -> agc
+END

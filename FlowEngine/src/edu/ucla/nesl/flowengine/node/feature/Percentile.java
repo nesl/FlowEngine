@@ -12,8 +12,8 @@ public class Percentile extends DataFlowNode {
 
 	@Override
 	protected String processParentNodeName(String parentNodeName) {
-		if (parentNodeName.contains("Sort")) {
-			return parentNodeName.replace("Sort", "");
+		if (parentNodeName.contains("|Sort")) {
+			return parentNodeName.replace("|Sort", "");
 		}
 		return parentNodeName;
 	}

@@ -15,14 +15,14 @@ public class FFT extends DataFlowNode {
 	
 	@Override
 	protected String processParentNodeName(String parentNodeName) {
-		if (parentNodeName.contains("Buffer")) {
-			return parentNodeName.split("Buffer")[0];
+		if (parentNodeName.contains("|Buffer")) {
+			return parentNodeName.split("\\|Buffer")[0];
 		}
 		return parentNodeName;
 	}
 
-	public FFT(String simpleNodeName, double startFrequency, double endFrequency, double stepFrequency) {
-		super(simpleNodeName);
+	public FFT(String parameterizedSimpleNodeName, double startFrequency, double endFrequency, double stepFrequency) {
+		super(parameterizedSimpleNodeName);
 		mStartFrequency = startFrequency;
 		mEndFrequency = endFrequency;
 		mStepFrequency = stepFrequency;

@@ -25,8 +25,8 @@ public class Buffer extends DataFlowNode {
 		return parentNodeName;
 	}
 
-	public Buffer(String simpleNodeName, int bufferSize, int sampleInterval) {
-		super(simpleNodeName);
+	public Buffer(String parameterizedSimpleNodeName, int bufferSize, int sampleInterval) {
+		super(parameterizedSimpleNodeName);
 		mBufferSize = bufferSize;
 		mSampleInterval = sampleInterval;
 	}

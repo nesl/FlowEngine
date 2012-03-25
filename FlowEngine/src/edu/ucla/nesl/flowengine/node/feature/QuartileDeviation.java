@@ -15,8 +15,8 @@ public class QuartileDeviation extends DataFlowNode {
 	
 	@Override
 	protected String processParentNodeName(String parentNodeName) {
-		if (parentNodeName.contains("Percentile")) {
-			return parentNodeName.split("Percentile")[0];
+		if (parentNodeName.contains("|Percentile")) {
+			return parentNodeName.split("\\|Percentile")[0];
 		}
 		return parentNodeName;
 	}

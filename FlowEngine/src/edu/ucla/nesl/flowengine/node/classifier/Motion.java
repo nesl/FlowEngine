@@ -1,6 +1,7 @@
 package edu.ucla.nesl.flowengine.node.classifier;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Motion extends DataFlowNode {
@@ -30,7 +31,7 @@ public class Motion extends DataFlowNode {
 			boolean isMotion = classifyMotion();
 			mFFT1_3 = null;
 			mFFT4_5 = null;
-			output("Motion", "boolean", isMotion, 0, timestamp);
+			output(SensorType.MOTION_CONTEXT_NAME, "boolean", isMotion, 0, timestamp);
 		}
 	}
 }

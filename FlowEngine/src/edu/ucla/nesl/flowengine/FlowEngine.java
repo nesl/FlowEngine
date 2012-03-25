@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,8 +44,9 @@ public class FlowEngine extends Service {
 	private Map<Integer, Device> mDeviceMap = new HashMap<Integer, Device>();
 	private Map<Integer, Application> mApplicationMap = new HashMap<Integer, Application>();
 	private Map<Integer, SeedNode> mSeedNodeMap = new HashMap<Integer, SeedNode>();
+	private Map<String, DataFlowNode> mNodeNameMap = new HashMap<String, DataFlowNode>();
 
-	private GraphConfiguration mGraphConfig = new GraphConfiguration(mSeedNodeMap);
+	private GraphConfiguration mGraphConfig = new GraphConfiguration(mSeedNodeMap, mNodeNameMap);
 	
 	private Handler mHandler = new Handler() {
 		@Override
@@ -74,7 +76,9 @@ public class FlowEngine extends Service {
 					long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
 					
 					if (type.equals("double[]")) {
-						seed.input(name, type, bundle.getDoubleArray(BUNDLE_DATA), length, timestamp);	
+						seed.input(name, type, bundle.getDoubleArray(BUNDLE_DATA), length, timestamp);
+					} else if (type.equals("double")) {
+						seed.input(name, type, bundle.getDouble(BUNDLE_DATA), length, timestamp);
 					} else if (type.equals("int[]")) {
 						seed.input(name, type, bundle.getIntArray(BUNDLE_DATA), length, timestamp);
 					} else if (type.equals("int")) {
@@ -106,7 +110,7 @@ public class FlowEngine extends Service {
 		}
 		
 		@Override
-		public int registerApplication(ApplicationInterface appInterface) throws RemoteException {
+		public int register(ApplicationInterface appInterface) throws RemoteException {
 			synchronized(mApplicationMap) {
 				Application app = new Application(appInterface);
 				int appID = mNextApplicationID;
@@ -120,28 +124,19 @@ public class FlowEngine extends Service {
 		}
 
 		@Override
-		public void addSubscription(int appId, String nodeName) throws RemoteException {
+		public void subscribe(int appId, String nodeName) throws RemoteException {
 			Log.d(TAG, "subscribe for " + nodeName);
 			mApplicationMap.get(appId).addSubscribedNodeNames(nodeName);
+			mGraphConfig.subscribe(mApplicationMap.get(appId), nodeName);
 		}
 
 		@Override
-		public void configure(int appId) throws RemoteException {
-			mGraphConfig.configureApplication(mApplicationMap.get(appId));
-		}
-
-		@Override
-		public void unregisterApplication(int appId) throws RemoteException {
+		public void unregister(int appId) throws RemoteException {
 			synchronized(mApplicationMap) {
-				Application removedApplication = mApplicationMap.remove(appId);
-				for (Publish node: removedApplication.getPublishNodes()) {
-					for (DataFlowNode parent: node.getParents()) {
-						parent.removeChild(node);
-					}
-				}
+				Application removedApp = mApplicationMap.remove(appId);
+				mGraphConfig.removeApplication(removedApp);
 			}
 		}
-
 	};
 	
 	private FlowEngineAPI.Stub mDeviceAPI = new FlowEngineAPI.Stub() {
@@ -179,18 +174,19 @@ public class FlowEngine extends Service {
 					SeedNode existingSeed = mSeedNodeMap.get(sensor);
 					if (existingSeed != null) {
 						existingSeed.attachDevice(device);
+						existingSeed.startSensor();
 					} else {
-						mSeedNodeMap.put(sensor, new SeedNode(SensorType.getSensorName(sensor), sensor, device));
+						SeedNode seed = new SeedNode(SensorType.getSensorName(sensor), sensor, device);
+						mSeedNodeMap.put(sensor, seed);
+						mNodeNameMap.put("|" + SensorType.getSensorName(sensor), seed);
 					}
-					mGraphConfig.configureStressGraph();
-					mGraphConfig.configureConversationGraph();
 					DebugHelper.log(TAG, "Added sensor type: " + sensor);
 					
-					for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
+					/*for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
 						sensor = entry.getKey();
 						SeedNode node = entry.getValue();
 						DebugHelper.log(TAG, node.getClass().getName() + ": " + sensor + " device: " + node.getAttachedDevice());
-					}
+					}*/
 				}
 			}
 		}
@@ -203,11 +199,35 @@ public class FlowEngine extends Service {
 					if (removedDevice != null) {
 						Sensor[] sensors = removedDevice.getSensorList();
 						for (Sensor sensor: sensors) {
-							mSeedNodeMap.remove(sensor.getSensorType());
+							SeedNode seed = mSeedNodeMap.get(sensor.getSensorID());
+							if (seed.isConnected()) {
+								seed.detachDevice();
+							} else {
+								mSeedNodeMap.remove(sensor.getSensorID());
+								mNodeNameMap.remove("|" + SensorType.getSensorName(sensor.getSensorID()));
+							}
 						}
+						DebugHelper.log(TAG, "Removed device ID: " + deviceID);
 					}
 				}
 			}
+			// print seed map
+			DebugHelper.log(TAG, "Printing mSeedNodeMap..");
+			for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
+				int sensor = entry.getKey();
+				SeedNode node1 = entry.getValue();
+				DebugHelper.log(TAG, node1.getClass().getName() + ": " + sensor + " device: " + node1.getAttachedDevice());
+			}
+			DebugHelper.log(TAG, "Done.");
+
+			// print node name map
+			DebugHelper.log(TAG, "Printing mNodeNameMap..");
+			for (Map.Entry<String, DataFlowNode> entry: mNodeNameMap.entrySet()) {
+				String nodeName = entry.getKey();
+				DataFlowNode node2 = entry.getValue();
+				DebugHelper.log(TAG, nodeName + ": " + node2.getClass().getName());
+			}
+			DebugHelper.log(TAG, "Done.");
 		}
 
 		@Override
@@ -223,13 +243,13 @@ public class FlowEngine extends Service {
 		}
 
 		@Override
-		public void pushInt(int deviceID, int sensor, int data, int length, long timestamp) throws RemoteException {
+		public void pushDouble(int deviceID, int sensor, double data, long timestamp) throws RemoteException {
 			Bundle bundle = new Bundle();
 			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
 			bundle.putInt(BUNDLE_SENSOR, sensor);
-			bundle.putString(BUNDLE_TYPE, "int");
-			bundle.putInt(BUNDLE_DATA, data);
-			bundle.putInt(BUNDLE_LENGTH, length);
+			bundle.putString(BUNDLE_TYPE, "double");
+			bundle.putDouble(BUNDLE_DATA, data);
+			bundle.putInt(BUNDLE_LENGTH, 1);
 			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
 			mHandler.sendMessage(mHandler.obtainMessage(MSG_PUSH_DATA, bundle));
 		}
@@ -242,6 +262,18 @@ public class FlowEngine extends Service {
 			bundle.putString(BUNDLE_TYPE, "int[]");
 			bundle.putIntArray(BUNDLE_DATA, data);
 			bundle.putInt(BUNDLE_LENGTH, length);
+			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_PUSH_DATA, bundle));
+		}
+
+		@Override
+		public void pushInt(int deviceID, int sensor, int data, long timestamp) throws RemoteException {
+			Bundle bundle = new Bundle();
+			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
+			bundle.putInt(BUNDLE_SENSOR, sensor);
+			bundle.putString(BUNDLE_TYPE, "int");
+			bundle.putInt(BUNDLE_DATA, data);
+			bundle.putInt(BUNDLE_LENGTH, 1);
 			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
 			mHandler.sendMessage(mHandler.obtainMessage(MSG_PUSH_DATA, bundle));
 		}
@@ -290,7 +322,6 @@ public class FlowEngine extends Service {
 	@Override
 	public void onDestroy() {
 		DebugHelper.logi(TAG, "Service destroying..");
-
 		DebugHelper.stopTrace();
 		
 		for (Map.Entry<Integer, Device> entry : mDeviceMap.entrySet()) {

@@ -15,7 +15,8 @@ public class RootMeanSquare extends DataFlowNode {
 		return parentNodeName;
 	}
 	
-	public RootMeanSquare(double factor, double scale) {
+	public RootMeanSquare(String parameterizedSimpleNodeName, double factor, double scale) {
+		super(parameterizedSimpleNodeName);
 		mFactor = factor;
 		mScale = scale;
 	}

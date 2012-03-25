@@ -206,7 +206,11 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	}
 	
 	private void stopBattery() {
-		this.unregisterReceiver(mBatteryReceiver);
+		try {
+			this.unregisterReceiver(mBatteryReceiver);
+		} catch (IllegalArgumentException e) {
+			
+		}
 	}
 	
 	@Override
@@ -250,12 +254,14 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		stopGPS();
 		stopBattery();
 		
+		
 		try {
 			mAPI.removeDevice(mDeviceID);
-			unbindService(mServiceConnection);
 		} catch (Throwable t) {
 			Log.w(TAG, "Failed to unbind from the service", t);
 		}
+
+		unbindService(mServiceConnection);
 
 		super.onDestroy();
 	}
