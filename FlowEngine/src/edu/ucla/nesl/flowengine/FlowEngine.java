@@ -1,8 +1,9 @@
 package edu.ucla.nesl.flowengine;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.app.Service;
 import android.content.Intent;
@@ -18,7 +19,6 @@ import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAppAPI;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
-import edu.ucla.nesl.flowengine.node.Publish;
 import edu.ucla.nesl.flowengine.node.SeedNode;
 import edu.ucla.nesl.util.NotificationHelper;
 
@@ -36,7 +36,9 @@ public class FlowEngine extends Service {
 	
 	private static final int MSG_PUSH_DATA = 1;
 	
-	private NotificationHelper mNotify;
+	private static final int LED_NOTIFICATION_ID = 1;
+	
+	private NotificationHelper mNotification;
 	
 	int mNextDeviceID = 1;
 	int mNextApplicationID = 1;
@@ -47,6 +49,41 @@ public class FlowEngine extends Service {
 	private Map<String, DataFlowNode> mNodeNameMap = new HashMap<String, DataFlowNode>();
 
 	private GraphConfiguration mGraphConfig = new GraphConfiguration(mSeedNodeMap, mNodeNameMap);
+	
+	private Map<Integer, Timer> mCancelTimerMap = new HashMap<Integer, Timer>();
+	
+	class CancelNotificationTimerTask extends TimerTask {
+		int mSensorID;
+		
+		public CancelNotificationTimerTask(int sensorID) {
+			mSensorID = sensorID;
+		}
+		
+		@Override
+		public void run() {
+			mNotification.cancel(mSensorID);
+			Timer timer;
+			timer = mCancelTimerMap.remove(mSensorID);
+			timer.cancel();
+		}
+	}
+
+	private void showNotification(int sensor, String name) {
+		Timer timer = mCancelTimerMap.get(sensor);
+		if (timer == null) {
+			Log.d(TAG, "null");
+			mNotification.showNotificationNowOngoing(sensor, "Receiving " + name + "..");
+			timer = new Timer();
+			timer.schedule(new CancelNotificationTimerTask(sensor), 5000);
+			mCancelTimerMap.put(sensor, timer);
+		} else {
+			Log.d(TAG, "not null");
+			timer.cancel();
+			timer = new Timer();
+			timer.schedule(new CancelNotificationTimerTask(sensor), 5000);
+			mCancelTimerMap.put(sensor, timer);
+		}
+	}
 	
 	private Handler mHandler = new Handler() {
 		@Override
@@ -74,6 +111,9 @@ public class FlowEngine extends Service {
 					int length = bundle.getInt(BUNDLE_LENGTH);
 					String name = SensorType.getSensorName(sensor);
 					long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
+					
+					// show notification
+					showNotification(sensor, name);
 					
 					if (type.equals("double[]")) {
 						seed.input(name, type, bundle.getDoubleArray(BUNDLE_DATA), length, timestamp);
@@ -117,7 +157,8 @@ public class FlowEngine extends Service {
 				mNextApplicationID += 1;
 				mApplicationMap.put(appID, app);
 				
-				DebugHelper.log(TAG, "Added application ID: " + appID);
+				DebugHelper.log(TAG, "Registered application ID " + appID);
+				mNotification.showNotificationNow("Registered application ID: " + appID);
 				
 				return appID;
 			}
@@ -128,6 +169,7 @@ public class FlowEngine extends Service {
 			Log.d(TAG, "subscribe for " + nodeName);
 			mApplicationMap.get(appId).addSubscribedNodeNames(nodeName);
 			mGraphConfig.subscribe(mApplicationMap.get(appId), nodeName);
+			mNotification.showNotificationNow("Subscribed " + nodeName);
 		}
 
 		@Override
@@ -135,6 +177,7 @@ public class FlowEngine extends Service {
 			synchronized(mApplicationMap) {
 				Application removedApp = mApplicationMap.remove(appId);
 				mGraphConfig.removeApplication(removedApp);
+				mNotification.showNotificationNow("Unregistering application ID " + appId);
 			}
 		}
 	};
@@ -159,6 +202,7 @@ public class FlowEngine extends Service {
 				mNextDeviceID += 1;
 				mDeviceMap.put(deviceID, device);
 				
+				mNotification.showNotificationNow("Added device ID " + deviceID);
 				DebugHelper.log(TAG, "Added device ID: " + deviceID);
 				
 				return deviceID;
@@ -208,6 +252,7 @@ public class FlowEngine extends Service {
 							}
 						}
 						DebugHelper.log(TAG, "Removed device ID: " + deviceID);
+						mNotification.showNotificationNow("Removed device ID " + deviceID);
 					}
 				}
 			}
@@ -314,7 +359,8 @@ public class FlowEngine extends Service {
 		
 		INSTANCE = this;
 		
-		mNotify = new NotificationHelper(this, this.getClass().getSimpleName(), this.getClass().getName(), R.drawable.ic_launcher);
+		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
+		mNotification.showNotificationNow("FlowEngine starting..");
 		
 		DebugHelper.startTrace();
 	}
@@ -323,6 +369,8 @@ public class FlowEngine extends Service {
 	public void onDestroy() {
 		DebugHelper.logi(TAG, "Service destroying..");
 		DebugHelper.stopTrace();
+
+		mNotification.showNotificationNow("FlowEngine destryong..");
 		
 		for (Map.Entry<Integer, Device> entry : mDeviceMap.entrySet()) {
 			try {

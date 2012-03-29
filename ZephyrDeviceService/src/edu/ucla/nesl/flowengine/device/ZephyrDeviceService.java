@@ -20,11 +20,15 @@ import android.util.Log;
 import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
+import edu.ucla.nesl.flowengine.device.zephyr.R;
+import edu.ucla.nesl.util.NotificationHelper;
 
 public class ZephyrDeviceService extends Service implements Runnable {
 	private static final String TAG = ZephyrDeviceService.class.getSimpleName();
-	private static final String FlowEngineServiceName = "edu.ucla.nesl.flowengine.FlowEngine";
+	private static final String FLOW_ENGINE_SERVICE_NAME = "edu.ucla.nesl.flowengine.FlowEngine";
 	private static final String BLUETOOTH_SERVICE_UUID = "00001101-0000-1000-8000-00805f9b34fb";
+	
+	private static final String ZEPHYR_BLUETOOTH_ADDRESS = "00:07:80:99:9E:6C";
 
 	private static final int MSG_STOP = 1;
 	private static final int MSG_START = 2;
@@ -42,11 +46,12 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	private ZephyrDeviceService mThisService = this;
 
 	private BluetoothSocket mSocket;
-	private String mDeviceAddress = "00:07:80:99:9E:6C";
 	private Thread mReceiveThread;
 	private boolean mIsStopRequest = false;
 	private OutputStream mOutputStream;
 	private InputStream mInputStream;
+
+	private NotificationHelper mNotification;
 
 	private int mFakeRIPData[][] = {
 			{450, 489, 528, 566, 603, 640, 675, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 675, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 674, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 225, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {449, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 225, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 675, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {449, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 225, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 224, 259, 296, 333, 371, 410}, {449, 489, 528, 566, 603, 640, 674, 708, 739, 768, 794, 818, 839, 857, 872, 884, 893, 898}, {900, 898, 893, 884, 872, 857, 839, 818, 794, 768, 739, 708, 675, 640, 603, 566, 528, 489}, {450, 410, 371, 333, 296, 259, 225, 191, 160, 131, 105, 81, 60, 42, 27, 15, 6, 1}, {0, 1, 6, 15, 27, 42, 60, 81, 105, 131, 160, 191, 225, 259, 296, 333, 371, 410}			
@@ -333,7 +338,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 				}
 				Log.d(TAG, "Trying to reconnect(1)..");
 				int numRetries = 2;
-				while (!mIsStopRequest && !connect(mDeviceAddress)) {
+				while (!mIsStopRequest && !connect(ZEPHYR_BLUETOOTH_ADDRESS)) {
 					Log.d(TAG, "Trying to reconnect(" + numRetries + ")..");
 					numRetries += 1;
 					try {
@@ -362,10 +367,11 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	}
 
 	private void stop() {
-		if (mReceiveThread != null)
+		if (mReceiveThread != null && !mIsStopRequest)
 		{
 			mIsStopRequest = true;
 			Log.i(TAG, "Stop receiving requested.");
+			mNotification.showNotificationNow("Stop receiving..");
 		}
 	}
 	
@@ -373,10 +379,11 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		if (mReceiveThread == null) {
 			mReceiveThread = new Thread(this);
 		}
-		
 		Log.d(TAG, "Trying to connect to Zephyr..");
 		if (mSocket == null) {
-			while (!connect(mDeviceAddress)) {
+			mNotification.showNotificationNow("Connecting to Zephyr..");
+			while (!connect(ZEPHYR_BLUETOOTH_ADDRESS)) {
+				mNotification.showNotificationNow("Retrying..");
 				Log.d(TAG, "Retrying..");
 				try {
 					Thread.sleep(1000);
@@ -385,6 +392,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 				}
 			}
 			Log.d(TAG, "Start receiving thread..");
+			mNotification.showNotificationNow("Connected to Zephyr!");
 			mReceiveThread.start();
 		} else {
 			Log.d(TAG, "Already connected to Zephyr.");
@@ -470,7 +478,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	private void startFlowEngineService() {
         // Start FlowEngine service if it's not running.
 		Log.d(TAG, "Starting FlowEngineService..");
-		Intent intent = new Intent(FlowEngineServiceName);
+		Intent intent = new Intent(FLOW_ENGINE_SERVICE_NAME);
 
 		int numRetries = 1;
 		while (startService(intent) == null) {
@@ -501,6 +509,10 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	public void onCreate() {
 		super.onCreate();
 		Log.i(TAG, "Service creating..");
+
+		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
+		mNotification.showNotificationNow("ZephyrDeviceService starting..");
+
 		startFlowEngineService();
 		Log.i(TAG, "Service created.");
 	}
@@ -508,6 +520,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	@Override
 	public void onDestroy() {
 		Log.i(TAG, "Service destroying");
+		
+		mNotification.showNotificationNow("ZephyrDeviceService destroying..");
 		
 		stop();
 		

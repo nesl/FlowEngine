@@ -17,7 +17,7 @@ public class NotificationHelper {
 	private int mIcon;
 
 	private Random mRandom = new Random();;
-	private int mNotificationID = mRandom.nextInt();
+	private int mNotificationID = 1000;
 	
 	public NotificationHelper(Context context, String contextTitle, String action, int icon) {
 		mContext = context;
@@ -27,6 +27,10 @@ public class NotificationHelper {
 		mNotificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
 	}
 
+	public void cancel(int notificationID) {
+		mNotificationManager.cancel(notificationID);
+	}
+	
 	public void showNotificationNow(CharSequence tickerText) {
 		showNotificationNow(mNotificationID++, tickerText, tickerText);
 	}
@@ -40,11 +44,28 @@ public class NotificationHelper {
 		showNotification(notificationId, tickerText, contextText, when);
 	}
 
+	public void showNotificationNow(int notificationId, CharSequence tickerText, CharSequence contextText, int flags) {
+		long when = System.currentTimeMillis();
+		showNotification(notificationId, tickerText, contextText, when, flags);
+	}
+
+	public void showNotificationNowOngoing(int notificationId, CharSequence tickerText) {
+		int flags = 0;
+		flags |= Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT;
+		showNotificationNow(notificationId, tickerText, tickerText, flags);
+	}
+
 	public void showNotification(int notificationId, CharSequence tickerText, CharSequence contextText, long when) {
+		int flags = 0;
+		flags |= Notification.FLAG_AUTO_CANCEL;
+		showNotification(notificationId, tickerText, contextText, when, flags);
+	}
+	
+	public void showNotification(int notificationId, CharSequence tickerText, CharSequence contextText, long when, int flags) {
 		CharSequence contextTitle = mContextTitle;
 		
 		Notification notification = new Notification(mIcon, tickerText, when);
-		notification.flags |= Notification.FLAG_AUTO_CANCEL | Notification.FLAG_SHOW_LIGHTS; // | Notification.FLAG_FOREGROUND_SERVICE;
+		notification.flags |= flags;
 		
 		Intent notificationIntent = new Intent(mAction);
 		PendingIntent contentIntent = PendingIntent.getBroadcast(mContext, 0, notificationIntent, 0);
@@ -52,5 +73,4 @@ public class NotificationHelper {
 		
 		mNotificationManager.notify(notificationId, notification);
 	}
-	
 }

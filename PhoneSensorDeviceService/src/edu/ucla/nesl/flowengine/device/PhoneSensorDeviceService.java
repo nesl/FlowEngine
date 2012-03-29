@@ -31,7 +31,6 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	private static final String TAG = PhoneSensorDeviceService.class.getSimpleName();
 	
 	private static final String FLOW_ENGINE_SERVICE = "edu.ucla.nesl.flowengine.FlowEngine";
-	private static final String THIS_SERVICE = "edu.ucla.nesl.flowengine.device.PhoneSensorDeviceService";
 	
 	private static final int GPS_INTERVAL = 1000; // ms
 	private static final int GPS_LOCATION_INTERVAL = 0; // meters
@@ -52,7 +51,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	private int	mDeviceID;
 	private boolean mIsFlowEngineConnected = false;
 	
-	private NotificationHelper notification;
+	private NotificationHelper mNotification;
 
 	private BroadcastReceiver mBatteryReceiver = new BroadcastReceiver() {
 		@Override
@@ -226,8 +225,8 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		super.onCreate();
 		Log.i(TAG, "Service creating");
 		
-		notification = new NotificationHelper(this, TAG, THIS_SERVICE, R.drawable.ic_launcher);
-		notification.showNotificationNow("Service starting..");
+		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
+		mNotification.showNotificationNow("PhoneSensorDeviceService starting..");
 		
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -239,7 +238,6 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		
 		// Bind to the FlowEngine service.
 		bindService(intent, mServiceConnection, 0);
-		
 	}
 	
 	@Override
@@ -248,7 +246,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		//Debug.stopMethodTracing();
 		
 		Log.i(TAG, "Service destroying");
-		notification.showNotificationNow("Service destroying..");
+		mNotification.showNotificationNow("PhoneSensorDeviceService destroying..");
 		
 		stopAccelerometer();
 		stopGPS();
