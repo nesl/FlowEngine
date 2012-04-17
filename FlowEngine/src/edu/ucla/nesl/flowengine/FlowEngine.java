@@ -71,13 +71,11 @@ public class FlowEngine extends Service {
 	private void showNotification(int sensor, String name) {
 		Timer timer = mCancelTimerMap.get(sensor);
 		if (timer == null) {
-			Log.d(TAG, "null");
 			mNotification.showNotificationNowOngoing(sensor, "Receiving " + name + "..");
 			timer = new Timer();
 			timer.schedule(new CancelNotificationTimerTask(sensor), 5000);
 			mCancelTimerMap.put(sensor, timer);
 		} else {
-			Log.d(TAG, "not null");
 			timer.cancel();
 			timer = new Timer();
 			timer.schedule(new CancelNotificationTimerTask(sensor), 5000);
