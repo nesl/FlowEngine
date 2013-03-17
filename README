@@ -3,7 +3,7 @@ FlowEngine: A System Service for Efficient Computation of Context Inferences on 
 by haksoo (haksoo@cs.ucla.edu)
 
 There are total 6 projects on the Github,
-https://github.com/haksoo/FlowEngine, but you probably need only 5:
+https://github.com/nesl/FlowEngine, but you probably need only 5:
 DataLogger, FlowEngine, FlowEngineUI, PhoneSensorDeviceService,
 ZephyrDeviceService.  They require Android version at least 2.3.1. 
 
