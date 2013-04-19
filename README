@@ -2,29 +2,21 @@ FlowEngine: A System Service for Efficient Computation of Context Inferences on 
 
 by haksoo (haksoo@cs.ucla.edu)
 
-There are total 6 projects on the Github,
-https://github.com/nesl/FlowEngine, but you probably need only 5:
-DataLogger, FlowEngine, FlowEngineUI, PhoneSensorDeviceService,
+There are total 6 projects on the Github, https://github.com/nesl/FlowEngine, but you probably need only 5: DataLogger, FlowEngine, FlowEngineUI, PhoneSensorDeviceService,
 ZephyrDeviceService.  They require Android version at least 2.3.1. 
 
 Here are the steps to follow.
 
 - Once you import the project into Eclipse, you probably see compile errors because of the project build path.  Go to each project's properties, under Java Build Path, change the path for "<Project Name>/linked_src" to "<Your GitHub Clone Path>/FlowEngine/linked_src".
 
-- Change Zephyr bluetooth address.  It's in line 31,
-ZephyrDeviceService.java in ZephyrDeviceService project.
+- Change Zephyr bluetooth address defined in ZephyrDeviceService.java in ZephyrDeviceService project.
 
 - Compile and install the above 5 projects on Android phone individually.
 
-- Launch FlowEngineUI activity. You can see there are 4 buttons for
-starting and stopping each services.
+- Launch FlowEngineUI activity.  You can see there are 4 buttons for starting and stopping each services.
 
-- Touch ZephyrDeviceService button. It will automatically start
-FlowEngine service, too.
+- Touch ZephyrDeviceService button.  It will automatically start FlowEngine service, too.
 
-- Launch DataLogger activity.  The classification results from
-FlowEngine will be displayed on the screen.
+- Launch DataLogger activity.  The classification results from FlowEngine will be displayed on the screen.
 
-- You can also start PhoneSensorDevice service on FlowEngineUI
-activity.  You will see Activity classification result displayed on
-DataLogger activity.
+- You can also start PhoneSensorDevice service on FlowEngineUI activity.  You will see Activity classification result displayed on DataLogger activity.
