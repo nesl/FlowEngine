@@ -22,7 +22,9 @@ import edu.ucla.nesl.flowengine.aidl.FlowEngineAppAPI;
 public class DataService extends Service {
 
 	public static final String BROADCAST_INTENT_MESSAGE = "edu.ucla.nesl.datacollector.service.DataService";
-	
+
+	private static final int RETRY_INTERVAL = 5000; // ms
+
 	private static final String BUNDLE_NAME = "name";
 	private static final String BUNDLE_TYPE = "type";
 	private static final String BUNDLE_DATA = "data";
@@ -45,14 +47,40 @@ public class DataService extends Service {
 	@Override
 	public void onCreate() {
 		Log.d(Const.TAG, "Trying to bind to flowengine service");
-		Intent intent = new Intent(Const.FLOW_ENGINE_APPLICATION_SERVICE);
-		startService(intent);
-		bindService(intent, mServiceConnection, 0);
+		tryBindToFlowEngineService();
 		super.onCreate();
 	}
 
+	private void tryBindToFlowEngineService() {
+		Intent intent = new Intent(Const.FLOW_ENGINE_APPLICATION_SERVICE);
+
+		int numRetries = 1;
+		while (startService(intent) == null) {
+			Log.d(Const.TAG, "Retrying to start FlowEngineService.. (" + numRetries + ")");
+			numRetries++;
+			try {
+				Thread.sleep(RETRY_INTERVAL);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		// Bind to the FlowEngine service.
+		numRetries = 1;
+		while (!bindService(intent, mServiceConnection, 0)) {
+			Log.d(Const.TAG, "Retrying to bind to FlowEngineService.. (" + numRetries + ")");
+			numRetries++;
+			try {
+				Thread.sleep(RETRY_INTERVAL);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	@Override
 	public void onDestroy() {
+		Log.d(Const.TAG, "onDestroy()");
 		try {
 			if (mAPI != null) {
 				mAPI.unregister(mAppID);
@@ -72,6 +100,14 @@ public class DataService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Bundle bundle = intent.getExtras();
+		
+		if (bundle == null && mAPI == null) {
+			Log.d(Const.TAG, "Trying to bind to flowengine service");
+			Intent i = new Intent(Const.FLOW_ENGINE_APPLICATION_SERVICE);
+			startService(i);
+			bindService(i, mServiceConnection, 0);
+		}
+		
 		if (bundle != null && mAPI != null) {
 			String requestType = bundle.getString(REQUEST_TYPE);
 			try {
@@ -154,6 +190,12 @@ public class DataService extends Service {
 			Log.i(Const.TAG, "Service connection closed.");
 			mAPI = null;
 			mAppID = -1;
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			tryBindToFlowEngineService();
 		}
 	};
 

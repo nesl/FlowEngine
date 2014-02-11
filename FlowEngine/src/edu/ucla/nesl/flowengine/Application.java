@@ -11,9 +11,9 @@ public class Application {
 	private List<String> mSubscribedNodeNames = new ArrayList<String>();
 	private Publish mPublishNode;
 	
-	public Application(ApplicationInterface appInterface) {
+	public Application(int appId, ApplicationInterface appInterface) {
 		mAppInterface = appInterface;
-		mPublishNode = new Publish(mAppInterface);
+		mPublishNode = new Publish(appId, mAppInterface);
 	}
 	
 	public void addSubscribedNodeNames(String nodeName) {

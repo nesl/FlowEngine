@@ -30,6 +30,8 @@ import edu.ucla.nesl.util.NotificationHelper;
 public class PhoneSensorDeviceService extends Service implements SensorEventListener, LocationListener {
 	private static final String TAG = PhoneSensorDeviceService.class.getSimpleName();
 
+	private static final int RETRY_INTERVAL = 5000; // ms
+
 	private static final String FLOW_ENGINE_SERVICE_NAME = "edu.ucla.nesl.flowengine.FlowEngine";
 
 	private static final int GPS_INTERVAL = 1000; // ms
@@ -114,6 +116,15 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		public void onServiceDisconnected(ComponentName name) {
 			Log.i(TAG, "Service connection closed.");
 			mIsFlowEngineConnected = false;
+			stopGPS();
+			stopAccelerometer();
+			stopBattery();
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			tryBindToFlowEngineService();
 		}
 	};
 
@@ -208,7 +219,6 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		try {
 			this.unregisterReceiver(mBatteryReceiver);
 		} catch (IllegalArgumentException e) {
-
 		}
 	}
 
@@ -232,7 +242,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-		startFlowEngineService();
+		tryBindToFlowEngineService();
 	}
 
 	@Override
@@ -240,20 +250,15 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		return super.onStartCommand(intent, flags, startId);
 	}
 
-	private void startFlowEngineService() {
-		// Start FlowEngine service if it's not running.
+	private void tryBindToFlowEngineService() {
 		Intent intent = new Intent(FLOW_ENGINE_SERVICE_NAME);
-
-		/*if (startService(intent) != null) {
-			bindService(intent, mServiceConnection, 0);
-		}*/
 
 		int numRetries = 1;
 		while (startService(intent) == null) {
 			Log.d(TAG, "Retrying to start FlowEngineService.. (" + numRetries + ")");
 			numRetries++;
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(RETRY_INTERVAL);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -265,7 +270,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 			Log.d(TAG, "Retrying to bind to FlowEngineService.. (" + numRetries + ")");
 			numRetries++;
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(RETRY_INTERVAL);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}

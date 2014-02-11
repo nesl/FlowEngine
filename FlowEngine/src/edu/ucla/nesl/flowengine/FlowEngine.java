@@ -151,10 +151,10 @@ public class FlowEngine extends Service {
 		@Override
 		public int register(ApplicationInterface appInterface) throws RemoteException {
 			synchronized(mApplicationMap) {
-				Application app = new Application(appInterface);
 				int appID = mNextApplicationID;
-				mNextApplicationID += 1;
+				Application app = new Application(appID, appInterface);
 				mApplicationMap.put(appID, app);
+				mNextApplicationID += 1;
 				
 				DebugHelper.log(TAG, "Registered application ID " + appID);
 				mNotification.showNotificationNow("Registered application ID: " + appID);
@@ -173,11 +173,7 @@ public class FlowEngine extends Service {
 
 		@Override
 		public void unregister(int appId) throws RemoteException {
-			synchronized(mApplicationMap) {
-				Application removedApp = mApplicationMap.remove(appId);
-				mGraphConfig.removeApplication(removedApp);
-				mNotification.showNotificationNow("Unregistering application ID " + appId);
-			}
+			unregisterApplication(appId);
 		}
 
 		@Override
@@ -391,14 +387,24 @@ public class FlowEngine extends Service {
 
 		mNotification.showNotificationNow("FlowEngine destryong..");
 		
-		for (Map.Entry<Integer, Device> entry : mDeviceMap.entrySet()) {
-			try {
-				entry.getValue().getInterface().kill();
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-		}
+		// Kill device services
+		//for (Map.Entry<Integer, Device> entry : mDeviceMap.entrySet()) {
+		//	try {
+		//		entry.getValue().getInterface().kill();
+		//	} catch (RemoteException e) {
+		//		e.printStackTrace();
+		//	}
+		//}
 		
 		super.onDestroy();
 	}
+	
+	public void unregisterApplication(int appId) {
+		synchronized(mApplicationMap) {
+			Application removedApp = mApplicationMap.remove(appId);
+			mGraphConfig.removeApplication(removedApp);
+			mNotification.showNotificationNow("Unregistering application ID " + appId);
+		}
+	}
+
 }

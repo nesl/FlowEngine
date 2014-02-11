@@ -1,15 +1,19 @@
 package edu.ucla.nesl.flowengine.node;
 
+import android.os.DeadObjectException;
 import android.os.RemoteException;
-import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.Application;
+import edu.ucla.nesl.flowengine.FlowEngine;
 import edu.ucla.nesl.flowengine.aidl.ApplicationInterface;
 
 public class Publish extends DataFlowNode {
 	private static final String TAG = Publish.class.getSimpleName();
 	
-	ApplicationInterface mAppInterface;
+	private int mAppId;
+	private ApplicationInterface mAppInterface;
 	
-	public Publish(ApplicationInterface appInterface) {
+	public Publish(int appId, ApplicationInterface appInterface) {
+		mAppId = appId;
 		mAppInterface = appInterface;
 	}
 	
@@ -27,6 +31,8 @@ public class Publish extends DataFlowNode {
 			} else if (type.equals("double")) {
 				mAppInterface.publishDouble(name, (Double)data, timestamp);
 			}
+		} catch (DeadObjectException e) {
+			FlowEngine.getInstance().unregisterApplication(mAppId);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
