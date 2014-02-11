@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">DataCollector</string>
+    <string name="app_title">Data Collector</string>
+    <string name="action_user_setup">Setup Login</string>
+    <string name="action_bluetooth_setup">Setup Bluetooth Devices</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="username">Username: </string>
+    <string name="password">Password: </string>
+    <string name="login">Login</string>
+    <string name="server_ip">Server IP:</string>
+    <string name="password_confirm">Confirm password: </string>
+    <string name="done">Done</string>
+    <string name="cancel">Cancel</string>
+
+</resources>
