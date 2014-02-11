@@ -17,7 +17,7 @@ public class NotificationHelper {
 	private int mIcon;
 
 	private Random mRandom = new Random();;
-	private int mNotificationID = 1000;
+	private int mNotificationID = 1;
 	
 	public NotificationHelper(Context context, String contextTitle, String action, int icon) {
 		mContext = context;
@@ -32,7 +32,11 @@ public class NotificationHelper {
 	}
 	
 	public void showNotificationNow(CharSequence tickerText) {
-		showNotificationNow(mNotificationID++, tickerText, tickerText);
+		showNotificationNow(mNotificationID, tickerText, tickerText);
+	}
+
+	public void showNotificationNow(CharSequence tickerText, CharSequence contextText) {
+		showNotificationNow(mNotificationID, tickerText, contextText);
 	}
 
 	public void showNotificationNow(int notificationId, CharSequence tickerText) {

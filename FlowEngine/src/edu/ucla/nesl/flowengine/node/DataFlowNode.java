@@ -3,6 +3,7 @@ package edu.ucla.nesl.flowengine.node;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
@@ -10,7 +11,9 @@ import edu.ucla.nesl.flowengine.DebugHelper;
 // Note: currently a node cannot be pulled by more than one node due to unregister process.
 public abstract class DataFlowNode {
 	private static final String TAG = DataFlowNode.class.getSimpleName();
-
+	
+	private static final String DEFAULT_PORT_NAME = "default";
+	
 	private boolean mIsEnabled;
 	private String mNodeName = null;
 	private String mSimpleNodeName = null;
@@ -42,15 +45,15 @@ public abstract class DataFlowNode {
 
 	public DataFlowNode() {
 		mIsEnabled = false;
-		addOutputPort("default", null);
-		addPullPort("default");
+		addOutputPort(DEFAULT_PORT_NAME, null);
+		addPullPort(DEFAULT_PORT_NAME);
 		mSimpleNodeName = this.getClass().getSimpleName();
 	}
 	
 	public DataFlowNode(String simpleNodeName) {
 		mIsEnabled = false;
-		addOutputPort("default", null);
-		addPullPort("default");
+		addOutputPort(DEFAULT_PORT_NAME, null);
+		addPullPort(DEFAULT_PORT_NAME);
 		mSimpleNodeName = simpleNodeName;
 	}
 
@@ -71,7 +74,7 @@ public abstract class DataFlowNode {
 	}
 	
 	public final void addPullNode(DataFlowNode node) {
-		addPullNode("default", node);
+		addPullNode(DEFAULT_PORT_NAME, node);
 	}
 	
 	private final void addPullNode(String port, DataFlowNode node) {
@@ -89,7 +92,7 @@ public abstract class DataFlowNode {
 	}
 	
 	public final void addOutputNode(DataFlowNode node) {
-		addOutputNode("default", node);
+		addOutputNode(DEFAULT_PORT_NAME, node);
 	}
 	
 	public final boolean addOutputNode(String port, DataFlowNode node) {
@@ -102,7 +105,26 @@ public abstract class DataFlowNode {
 		node.addParent(this);
 		return true;
 	}
+
+	public final void removeOutputNode(DataFlowNode node) {
+		removeOutputNode(DEFAULT_PORT_NAME, node);
+	}
 	
+	public final boolean removeOutputNode(String port, DataFlowNode node) {
+		List<DataFlowNode> nodeList = mOutPortMap.get(port);
+		if (nodeList == null) {
+			//throw new IllegalArgumentException("No port name: " + port);
+			return false;
+		}
+		nodeList.remove(node);
+		
+		if (nodeList.size() <= 0) {
+			disable();
+		}
+		
+		return true;
+	}
+
 	protected final void addParent(DataFlowNode parent) {
 		for (DataFlowNode node: mParentList) {
 			if (parent == node) {
@@ -546,8 +568,8 @@ public abstract class DataFlowNode {
 		mPullPortMap.clear();
 		mOutPortParameterMap.clear();
 		mParentList.clear();
-		addOutputPort("default", null);
-		addPullPort("default");
+		addOutputPort(DEFAULT_PORT_NAME, null);
+		addPullPort(DEFAULT_PORT_NAME);
 	}
 	
 	public boolean isPushConnected(DataFlowNode node) {

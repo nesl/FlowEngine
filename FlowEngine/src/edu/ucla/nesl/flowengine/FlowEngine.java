@@ -1,6 +1,7 @@
 package edu.ucla.nesl.flowengine;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -178,6 +179,23 @@ public class FlowEngine extends Service {
 				mNotification.showNotificationNow("Unregistering application ID " + appId);
 			}
 		}
+
+		@Override
+		public void unsubscribe(int appId, String nodeName) throws RemoteException {
+			mApplicationMap.get(appId).removeSubscribedNodeNames(nodeName);
+			mGraphConfig.unsubscribe(mApplicationMap.get(appId), nodeName);
+			mNotification.showNotificationNow("Unsubscribed " + nodeName);
+		}
+
+		@Override
+		public String[] getSubscribedNodeNames(int appId) throws RemoteException {
+			List<String> sensorList = mApplicationMap.get(appId).getSubscribedNodeNames();
+			if (sensorList.size() > 0) {
+				return sensorList.toArray(new String[sensorList.size()]);
+			} else {
+				return null;
+			}
+		}
 	};
 	
 	private FlowEngineAPI.Stub mDeviceAPI = new FlowEngineAPI.Stub() {
@@ -213,16 +231,19 @@ public class FlowEngine extends Service {
 				synchronized(mSeedNodeMap) {
 					Device device = mDeviceMap.get(deviceID);
 					device.addSensor(sensor, sampleInterval);
-					SeedNode existingSeed = mSeedNodeMap.get(sensor);
-					if (existingSeed != null) {
-						existingSeed.attachDevice(device);
-						existingSeed.startSensor();
+					SeedNode seedNode = mSeedNodeMap.get(sensor);
+					if (seedNode != null) {
+						seedNode.attachDevice(device);
 					} else {
-						SeedNode seed = new SeedNode(SensorType.getSensorName(sensor), sensor, device);
-						mSeedNodeMap.put(sensor, seed);
-						mNodeNameMap.put("|" + SensorType.getSensorName(sensor), seed);
+						seedNode = new SeedNode(SensorType.getSensorName(sensor), sensor, device);
+						mSeedNodeMap.put(sensor, seedNode);
+						mNodeNameMap.put("|" + SensorType.getSensorName(sensor), seedNode);
 					}
 					DebugHelper.log(TAG, "Added sensor type: " + sensor);
+					
+					if (seedNode.isEnabled()) {
+						seedNode.startSensor();
+					}
 					
 					/*for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
 						sensor = entry.getKey();

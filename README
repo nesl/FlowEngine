@@ -7,7 +7,7 @@ ZephyrDeviceService.  They require Android version at least 2.3.1.
 
 Here are the steps to follow.
 
-- Once you import the project into Eclipse, you probably see compile errors because of the project build path.  Go to each project's properties, under Java Build Path, change the path for "<Project Name>/linked_src" to "<Your GitHub Clone Path>/FlowEngine/linked_src".
+- Once you import the project into Eclipse, you probably see compile errors because of the project build path.  Go to each project's properties, under Java Build Path, in Source tab, change the path for "<Project Name>/linked_src" to "<Your GitHub Clone Path>/FlowEngine/linked_src".
 
 - Change Zephyr bluetooth address defined in ZephyrDeviceService.java in ZephyrDeviceService project.
 

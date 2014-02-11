@@ -8,6 +8,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -16,7 +17,6 @@ import edu.ucla.nesl.flowengine.node.Buffer;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 import edu.ucla.nesl.flowengine.node.Publish;
 import edu.ucla.nesl.flowengine.node.SeedNode;
-import edu.ucla.nesl.flowengine.node.classifier.Activity;
 import edu.ucla.nesl.flowengine.node.classifier.Motion;
 
 public class GraphConfiguration {
@@ -57,6 +57,15 @@ public class GraphConfiguration {
 		node.addOutputNode(publish);
 		node.enable();
 	}
+
+	public void unsubscribe(Application app, String nodeName) {
+		DataFlowNode node = mNodeNameMap.get("|" + nodeName);
+		if (node == null) {
+			return;
+		}
+		Publish publish = app.getPublishNode();
+		node.removeOutputNode(publish);
+	}
 	
 	public void removeApplication(Application removedApp) {
 		// remove Publish node for this app.
@@ -64,7 +73,7 @@ public class GraphConfiguration {
 		node.remove(mNodeNameMap, mSeedNodeMap);
 
 		// change flags
-		ArrayList<String> nodeNames = removedApp.getSubscribedNodeNames();
+		List<String> nodeNames = removedApp.getSubscribedNodeNames();
 		for (String nodeName: nodeNames) {
 			if (nodeName.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
 				// remove ActivityGraphControl node

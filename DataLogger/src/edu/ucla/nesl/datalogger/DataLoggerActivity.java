@@ -1,6 +1,8 @@
 package edu.ucla.nesl.datalogger;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -9,6 +11,7 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -40,6 +43,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -52,9 +56,9 @@ import edu.ucla.nesl.flowengine.aidl.FlowEngineAppAPI;
 
 public class DataLoggerActivity extends Activity {
 	private static final String TAG = DataLoggerActivity.class.getSimpleName();
-	
+
 	private static final String FLOW_ENGINE_SERVICE = "edu.ucla.nesl.flowengine.FlowEngine.application";
-	
+
 	private static final String BUNDLE_NAME = "name";
 	private static final String BUNDLE_TYPE = "type";
 	private static final String BUNDLE_DATA = "data";
@@ -69,48 +73,48 @@ public class DataLoggerActivity extends Activity {
 	private TextView mBatteryText;
 	private TextView mZephyrBatteryText;
 	private TextView mGPSText;
-	
+
 	private FlowEngineAppAPI mAPI;
 	private int mAppID;
 
 	private DatabaseHandler db = new DatabaseHandler(this);
-	
+
 	Timer mTimer = new Timer();
-	
+
 	class DataUploadTimerTask extends TimerTask {
 		private HttpClient mHttpClient;
-		
+
 		private StringBuilder inputStreamToString(InputStream is) throws IOException {
-		    String line = "";
-		    StringBuilder total = new StringBuilder();
-		    
-		    // Wrap a BufferedReader around the InputStream
-		    BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+			String line = "";
+			StringBuilder total = new StringBuilder();
 
-		    // Read response until the end
-		    while ((line = rd.readLine()) != null) { 
-		    	total.append(line); 
-		    }
+			// Wrap a BufferedReader around the InputStream
+			BufferedReader rd = new BufferedReader(new InputStreamReader(is));
 
-		    // Return full string
-		    return total;
+			// Read response until the end
+			while ((line = rd.readLine()) != null) { 
+				total.append(line); 
+			}
+
+			// Return full string
+			return total;
 		}
 
 		public DataUploadTimerTask() {
 			SchemeRegistry schemeRegistry = new SchemeRegistry();
 			schemeRegistry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
 			schemeRegistry.register(new Scheme("https", new EasySSLSocketFactory(), 443));
-			 
+
 			HttpParams params = new BasicHttpParams();
 			params.setParameter(ConnManagerPNames.MAX_TOTAL_CONNECTIONS, 30);
 			params.setParameter(ConnManagerPNames.MAX_CONNECTIONS_PER_ROUTE, new ConnPerRouteBean(30));
 			params.setParameter(HttpProtocolParams.USE_EXPECT_CONTINUE, false);
 			HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
-			 
+
 			ClientConnectionManager cm = new SingleClientConnManager(params, schemeRegistry);
 			mHttpClient = new DefaultHttpClient(cm, params);
 		}
-		
+
 		@Override
 		public void run() {
 			JSONObject jsonData = new JSONObject();
@@ -135,38 +139,38 @@ public class DataLoggerActivity extends Activity {
 				Log.e(TAG, "JSONException: " + e.getMessage());
 				return;
 			}
-			
-			
-			 // Create a new HttpClient and Post Header
-		    HttpPost httppost = new HttpPost("https://128.97.93.29/upload/");
 
-	        // Add your data
-	        List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
-	        nameValuePairs.add(new BasicNameValuePair("apikey", "a4b2a76d89a337f60d669dccdebb1a0fc8c417ca"));
-	        nameValuePairs.add(new BasicNameValuePair("data", jsonData.toString()));
-	        try {
+
+			// Create a new HttpClient and Post Header
+			HttpPost httppost = new HttpPost("https://128.97.93.29/upload/");
+
+			// Add your data
+			List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
+			nameValuePairs.add(new BasicNameValuePair("apikey", "a4b2a76d89a337f60d669dccdebb1a0fc8c417ca"));
+			nameValuePairs.add(new BasicNameValuePair("data", jsonData.toString()));
+			try {
 				httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
 			} catch (UnsupportedEncodingException e) {
 				Log.e(TAG, "UnsupportedEncodingException: " + e.getMessage());
 				return;
 			}
 
-		    try {
-		        // Execute HTTP Post Request
-		        HttpResponse response = mHttpClient.execute(httppost);
-		        int status = response.getStatusLine().getStatusCode();
-		        String reason = response.getStatusLine().getReasonPhrase();
-		        String reply = inputStreamToString(response.getEntity().getContent()).toString();
-		        Log.d(TAG, "STATUS " + status + " " + reason);
-		        Log.d(TAG, reply);
-		    } catch (ClientProtocolException e) {
-		    	Log.e(TAG, "ClientProtocolException: " + e.getMessage());
-		    } catch (IOException e) {
-		    	Log.e(TAG, "IOException: " + e.getMessage());
-		    }
+			try {
+				// Execute HTTP Post Request
+				HttpResponse response = mHttpClient.execute(httppost);
+				int status = response.getStatusLine().getStatusCode();
+				String reason = response.getStatusLine().getReasonPhrase();
+				String reply = inputStreamToString(response.getEntity().getContent()).toString();
+				Log.d(TAG, "STATUS " + status + " " + reason);
+				Log.d(TAG, reply);
+			} catch (ClientProtocolException e) {
+				Log.e(TAG, "ClientProtocolException: " + e.getMessage());
+			} catch (IOException e) {
+				Log.e(TAG, "IOException: " + e.getMessage());
+			}
 		}
 	}
-	
+
 	private ApplicationInterface.Stub mAppInterface = new ApplicationInterface.Stub() {
 		@Override
 		public void publishString(String name, String data, long timestamp) throws RemoteException {
@@ -227,7 +231,7 @@ public class DataLoggerActivity extends Activity {
 			mHandler.sendMessage(mHandler.obtainMessage(MSG_PUBLISH, bundle));
 		}
 	};
-	
+
 	private Handler mHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
@@ -238,7 +242,7 @@ public class DataLoggerActivity extends Activity {
 				long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
 				int length = bundle.getInt(BUNDLE_LENGTH);
 				String type = bundle.getString(BUNDLE_TYPE);
-				
+
 				Date date = new Date(timestamp);
 				String localDate = DateFormat.getDateInstance().format(date);
 				String localTime = DateFormat.getTimeInstance().format(date);
@@ -279,7 +283,7 @@ public class DataLoggerActivity extends Activity {
 			super.handleMessage(msg);
 		}
 	};
-	
+
 	private ServiceConnection mServiceConnection = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
@@ -304,29 +308,29 @@ public class DataLoggerActivity extends Activity {
 		}
 	};
 
-    /** Called when the activity is first created. */
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
-        
-        mStressText = (TextView)findViewById(R.id.stress_text);
-        mConversationText = (TextView)findViewById(R.id.conversation_text);
-        mActivityText = (TextView)findViewById(R.id.activity_text);
-        mBatteryText = (TextView)findViewById(R.id.battery_text);
-        mZephyrBatteryText = (TextView)findViewById(R.id.zephyr_battery_text);
-        mGPSText = (TextView)findViewById(R.id.gps_text);
-        
-        // Start FlowEngine service if it's not running.
+	/** Called when the activity is first created. */
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.main);
+
+		mStressText = (TextView)findViewById(R.id.stress_text);
+		mConversationText = (TextView)findViewById(R.id.conversation_text);
+		mActivityText = (TextView)findViewById(R.id.activity_text);
+		mBatteryText = (TextView)findViewById(R.id.battery_text);
+		mZephyrBatteryText = (TextView)findViewById(R.id.zephyr_battery_text);
+		mGPSText = (TextView)findViewById(R.id.gps_text);
+
+		// Start FlowEngine service if it's not running.
 		Intent intent = new Intent(FLOW_ENGINE_SERVICE);
 		startService(intent);
-		
+
 		// Bind to the FlowEngine service.
 		bindService(intent, mServiceConnection, 0);
-		
+
 		// start upload timer task
-		mTimer.schedule(new DataUploadTimerTask(), 0, 1000);
-    }
+		//mTimer.schedule(new DataUploadTimerTask(), 0, 1000);
+	}
 
 	@Override
 	protected void onDestroy() {
@@ -338,7 +342,7 @@ public class DataLoggerActivity extends Activity {
 			}
 			unbindService(mServiceConnection);
 		}
-		
+
 		super.onDestroy();
 	}
 }

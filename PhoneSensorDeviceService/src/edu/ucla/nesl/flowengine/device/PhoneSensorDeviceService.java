@@ -29,37 +29,37 @@ import edu.ucla.nesl.util.NotificationHelper;
 
 public class PhoneSensorDeviceService extends Service implements SensorEventListener, LocationListener {
 	private static final String TAG = PhoneSensorDeviceService.class.getSimpleName();
-	
-	private static final String FLOW_ENGINE_SERVICE = "edu.ucla.nesl.flowengine.FlowEngine";
-	
+
+	private static final String FLOW_ENGINE_SERVICE_NAME = "edu.ucla.nesl.flowengine.FlowEngine";
+
 	private static final int GPS_INTERVAL = 1000; // ms
 	private static final int GPS_LOCATION_INTERVAL = 0; // meters
-	
+
 	private static final int MSG_KILL = 0;
 	private static final int MSG_START = 1;
 	private static final int MSG_STOP = 2;
 	private static final int MSG_START_SENSOR = 3;
 	private static final int MSG_STOP_SENSOR = 4;
-	
+
 	private FlowEngineAPI 	mAPI;
 	private PhoneSensorDeviceService mThisService = this;
 
 	private SensorManager mSensorManager;
 	private Sensor mAccelerometer;
 	private LocationManager mLocationManager;
-	
+
 	private int	mDeviceID;
 	private boolean mIsFlowEngineConnected = false;
-	
+
 	private NotificationHelper mNotification;
 
 	private BroadcastReceiver mBatteryReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			if (intent.getAction().equals(Intent.ACTION_BATTERY_CHANGED)) {
-			    if (!mIsFlowEngineConnected) {
-			    	return;
-			    }
+				if (!mIsFlowEngineConnected) {
+					return;
+				}
 
 				int level = intent.getIntExtra("level", 0);
 				double voltage = intent.getIntExtra("voltage", 0) / 1000.0;
@@ -68,21 +68,21 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 				int status = intent.getIntExtra("status", BatteryManager.BATTERY_STATUS_UNKNOWN);
 				String strStatus;
 				switch (status) {
-					case BatteryManager.BATTERY_STATUS_CHARGING:
-						strStatus = "Charging";
-						break;
-					case BatteryManager.BATTERY_STATUS_DISCHARGING:
-						strStatus = "Discharging";
-						break;
-					case BatteryManager.BATTERY_STATUS_FULL:
-						strStatus = "Full";
-						break;
-					case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
-						strStatus = "Not charging";
-						break;
-					default:
-						strStatus = "Unknown";
-						break;
+				case BatteryManager.BATTERY_STATUS_CHARGING:
+					strStatus = "Charging";
+					break;
+				case BatteryManager.BATTERY_STATUS_DISCHARGING:
+					strStatus = "Discharging";
+					break;
+				case BatteryManager.BATTERY_STATUS_FULL:
+					strStatus = "Full";
+					break;
+				case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
+					strStatus = "Not charging";
+					break;
+				default:
+					strStatus = "Unknown";
+					break;
 				}
 				String data = strStatus + ", " + level + "%, " + voltage + "V, " + temperature + ", " + technology;
 				try {
@@ -93,7 +93,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 			}
 		}
 	}; 
-	
+
 	private ServiceConnection mServiceConnection = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
@@ -116,7 +116,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 			mIsFlowEngineConnected = false;
 		}
 	};
-	
+
 	private DeviceAPI.Stub mAccelerometerDeviceInterface = new DeviceAPI.Stub() {
 		@Override
 		public void start() throws RemoteException {
@@ -139,47 +139,47 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 			mHandler.sendMessage(mHandler.obtainMessage(MSG_KILL));
 		}
 	};
-	
+
 	private Handler mHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
 			int sensor;
 			switch (msg.what) {
-				case MSG_KILL:
-					mThisService.stopSelf();
-					break;
-				case MSG_START:
+			case MSG_KILL:
+				mThisService.stopSelf();
+				break;
+			case MSG_START:
+				startAccelerometer();
+				startGPS();
+				startBattery();
+				break;
+			case MSG_STOP:
+				stopAccelerometer();
+				stopGPS();
+				stopBattery();
+				break;
+			case MSG_START_SENSOR:
+				sensor = (Integer)msg.obj;
+				if (sensor == SensorType.PHONE_ACCELEROMETER) {
 					startAccelerometer();
+				} else if (sensor == SensorType.PHONE_GPS) {
 					startGPS();
+				} else if (sensor == SensorType.PHONE_BATTERY) {
 					startBattery();
-					break;
-				case MSG_STOP:
+				}
+				break;
+			case MSG_STOP_SENSOR:
+				sensor = (Integer)msg.obj;
+				if (sensor == SensorType.PHONE_ACCELEROMETER) {
 					stopAccelerometer();
+				} else if (sensor == SensorType.PHONE_GPS) {
 					stopGPS();
+				} else if (sensor == SensorType.PHONE_BATTERY) {
 					stopBattery();
-					break;
-				case MSG_START_SENSOR:
-					sensor = (Integer)msg.obj;
-					if (sensor == SensorType.PHONE_ACCELEROMETER) {
-						startAccelerometer();
-					} else if (sensor == SensorType.PHONE_GPS) {
-						startGPS();
-					} else if (sensor == SensorType.PHONE_BATTERY) {
-						startBattery();
-					}
-					break;
-				case MSG_STOP_SENSOR:
-					sensor = (Integer)msg.obj;
-					if (sensor == SensorType.PHONE_ACCELEROMETER) {
-						stopAccelerometer();
-					} else if (sensor == SensorType.PHONE_GPS) {
-						stopGPS();
-					} else if (sensor == SensorType.PHONE_BATTERY) {
-						stopBattery();
-					}
-					break;
-				default:
-					super.handleMessage(msg);
+				}
+				break;
+			default:
+				super.handleMessage(msg);
 			}
 		}
 	};
@@ -187,31 +187,31 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	private void startAccelerometer() {
 		mSensorManager.registerListener(mThisService, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
 	}
-	
+
 	private void stopAccelerometer() {
 		mSensorManager.unregisterListener(mThisService, mAccelerometer);
 	}
-	
+
 	private void startGPS() {
 		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, GPS_INTERVAL, GPS_LOCATION_INTERVAL, mThisService);
 	}
-	
+
 	private void stopGPS() {
 		mLocationManager.removeUpdates(mThisService);
 	}
-	
+
 	private void startBattery() {
 		this.registerReceiver(mBatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 	}
-	
+
 	private void stopBattery() {
 		try {
 			this.unregisterReceiver(mBatteryReceiver);
 		} catch (IllegalArgumentException e) {
-			
+
 		}
 	}
-	
+
 	@Override
 	public IBinder onBind(Intent intent) {		
 		return null;
@@ -221,61 +221,91 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	public void onCreate() {
 		//Debug.startMethodTracing("AccelerometerService");
 		//Debug.startAllocCounting();
-		
+
 		super.onCreate();
-		Log.i(TAG, "Service creating");
-		
+
+		Log.d(TAG, "Phone sensor service creating..");
+
 		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
-		mNotification.showNotificationNow("PhoneSensorDeviceService starting..");
-		
-        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
+		mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+		mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-        // Start FlowEngine service if it's not running.
-		Intent intent = new Intent(FLOW_ENGINE_SERVICE);
-		startService(intent);
-		
-		// Bind to the FlowEngine service.
-		bindService(intent, mServiceConnection, 0);
+		startFlowEngineService();
 	}
-	
+
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		return super.onStartCommand(intent, flags, startId);
+	}
+
+	private void startFlowEngineService() {
+		// Start FlowEngine service if it's not running.
+		Intent intent = new Intent(FLOW_ENGINE_SERVICE_NAME);
+
+		/*if (startService(intent) != null) {
+			bindService(intent, mServiceConnection, 0);
+		}*/
+
+		int numRetries = 1;
+		while (startService(intent) == null) {
+			Log.d(TAG, "Retrying to start FlowEngineService.. (" + numRetries + ")");
+			numRetries++;
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		// Bind to the FlowEngine service.
+		numRetries = 1;
+		while (!bindService(intent, mServiceConnection, 0)) {
+			Log.d(TAG, "Retrying to bind to FlowEngineService.. (" + numRetries + ")");
+			numRetries++;
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 	@Override
 	public void onDestroy() {
 		//Debug.stopAllocCounting();
 		//Debug.stopMethodTracing();
-		
-		Log.i(TAG, "Service destroying");
-		mNotification.showNotificationNow("PhoneSensorDeviceService destroying..");
-		
+
 		stopAccelerometer();
 		stopGPS();
 		stopBattery();
-		
-		try {
-			mAPI.removeDevice(mDeviceID);
-		} catch (Throwable t) {
-			Log.w(TAG, "Failed to unbind from the service", t);
-		}
 
-		unbindService(mServiceConnection);
+		try {
+			if (mAPI != null) {
+				mAPI.removeDevice(mDeviceID);
+				unbindService(mServiceConnection);
+			}
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
 
 		super.onDestroy();
 	}
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
-	    if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER)
-            return;
-	    if (!mIsFlowEngineConnected) {
-	    	return;
-	    }
-	    
-	    double[] data = new double[3];
-	    data[0] = event.values[0];
-	    data[1] = event.values[1];
-	    data[2] = event.values[2];
-	    
+		if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER)
+			return;
+		if (!mIsFlowEngineConnected) {
+			return;
+		}
+
+		double[] data = new double[3];
+		data[0] = event.values[0];
+		data[1] = event.values[1];
+		data[2] = event.values[2];
+
 		try {
 			mAPI.pushDoubleArray(mDeviceID, SensorType.PHONE_ACCELEROMETER, data, data.length, System.currentTimeMillis());
 		} catch (RemoteException e) {
@@ -285,9 +315,9 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 
 	@Override
 	public void onLocationChanged(Location location) {
-	    if (!mIsFlowEngineConnected) {
-	    	return;
-	    }
+		if (!mIsFlowEngineConnected) {
+			return;
+		}
 
 		long timestamp = System.currentTimeMillis(); 
 		double[] data = new double[4];
