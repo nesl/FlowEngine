@@ -9,7 +9,9 @@ public class Device {
 	public static final String ACTIVITY = "Activity";
 	public static final String STRESS = "Stress";
 	public static final String CONVERSATION = "Conversation";
-	
+
+	public static final String[] sensorNames = { LOCATION, ACCELEROMETER, ECG, RESPIRATION, ACTIVITY, STRESS, CONVERSATION }; 
+
 	private String serviceName;
 	private String deviceName;
 	private boolean isEnabled;

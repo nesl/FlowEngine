@@ -5,35 +5,36 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import edu.ucla.nesl.flowengine.DebugHelper;
 
 // Note: currently a node cannot be pulled by more than one node due to unregister process.
 public abstract class DataFlowNode {
 	private static final String TAG = DataFlowNode.class.getSimpleName();
-	
+
 	private static final String DEFAULT_PORT_NAME = "default";
-	
+
 	private boolean mIsEnabled;
 	private String mNodeName = null;
 	private String mSimpleNodeName = null;
-	
-	private Map<String, LinkedList<DataFlowNode>> mOutPortMap = 
-			new HashMap<String, LinkedList<DataFlowNode>>();
+
+	private Map<String, CopyOnWriteArrayList<DataFlowNode>> mOutPortMap = 
+			new HashMap<String, CopyOnWriteArrayList<DataFlowNode>>();
 	private Map<String, Object> mOutPortParameterMap = 
 			new HashMap<String, Object>();
-	private Map<String, LinkedList<DataFlowNode>> mPullPortMap = 
-			new HashMap<String, LinkedList<DataFlowNode>>();
-	private LinkedList<DataFlowNode> mParentList = 
-			new LinkedList<DataFlowNode>();
-	
+	private Map<String, CopyOnWriteArrayList<DataFlowNode>> mPullPortMap = 
+			new HashMap<String, CopyOnWriteArrayList<DataFlowNode>>();
+	private CopyOnWriteArrayList<DataFlowNode> mParentList = 
+			new CopyOnWriteArrayList<DataFlowNode>();
+
 	protected class ResultData {
 		public String name;
 		public String type;
 		public Object data;
 		public int length;
 		public long timestamp;
-		
+
 		public ResultData(String name, String type, Object outputData, int length, long timestamp) {
 			this.name = name;
 			this.type = type;
@@ -49,7 +50,7 @@ public abstract class DataFlowNode {
 		addPullPort(DEFAULT_PORT_NAME);
 		mSimpleNodeName = this.getClass().getSimpleName();
 	}
-	
+
 	public DataFlowNode(String simpleNodeName) {
 		mIsEnabled = false;
 		addOutputPort(DEFAULT_PORT_NAME, null);
@@ -58,45 +59,45 @@ public abstract class DataFlowNode {
 	}
 
 	abstract protected void processInput(String name, String type, Object data, int length, long timestamp);
-	
+
 	public void input(String name, String type, Object data, int length, long timestamp) {
 		if (mIsEnabled) {
 			processInput(name, type, data, length, timestamp);
 		}
 	}
-	
+
 	public ResultData processPull(Object parameter) {
 		return null;
 	}
-	
+
 	public final void addPullPort(String port) {
-		mPullPortMap.put(port, new LinkedList<DataFlowNode>());
+		mPullPortMap.put(port, new CopyOnWriteArrayList<DataFlowNode>());
 	}
-	
+
 	public final void addPullNode(DataFlowNode node) {
 		addPullNode(DEFAULT_PORT_NAME, node);
 	}
-	
+
 	private final void addPullNode(String port, DataFlowNode node) {
-		LinkedList<DataFlowNode> nodeList = mPullPortMap.get(port);
+		List<DataFlowNode> nodeList = mPullPortMap.get(port);
 		if (nodeList == null) {
 			throw new IllegalArgumentException("No port name: " + port);
 		}
 		nodeList.add(node);
 		addParent(node);
 	}
-	
+
 	public final void addOutputPort(String port, Object parameter) {
-		mOutPortMap.put(port, new LinkedList<DataFlowNode>());
+		mOutPortMap.put(port, new CopyOnWriteArrayList<DataFlowNode>());
 		mOutPortParameterMap.put(port, parameter);
 	}
-	
+
 	public final void addOutputNode(DataFlowNode node) {
 		addOutputNode(DEFAULT_PORT_NAME, node);
 	}
-	
+
 	public final boolean addOutputNode(String port, DataFlowNode node) {
-		LinkedList<DataFlowNode> nodeList = mOutPortMap.get(port);
+		List<DataFlowNode> nodeList = mOutPortMap.get(port);
 		if (nodeList == null) {
 			//throw new IllegalArgumentException("No port name: " + port);
 			return false;
@@ -109,7 +110,7 @@ public abstract class DataFlowNode {
 	public final void removeOutputNode(DataFlowNode node) {
 		removeOutputNode(DEFAULT_PORT_NAME, node);
 	}
-	
+
 	public final boolean removeOutputNode(String port, DataFlowNode node) {
 		List<DataFlowNode> nodeList = mOutPortMap.get(port);
 		if (nodeList == null) {
@@ -117,11 +118,11 @@ public abstract class DataFlowNode {
 			return false;
 		}
 		nodeList.remove(node);
-		
+
 		if (nodeList.size() <= 0) {
 			disable();
 		}
-		
+
 		return true;
 	}
 
@@ -133,24 +134,24 @@ public abstract class DataFlowNode {
 		}
 		mParentList.add(parent);
 	}
-	
+
 	public boolean isConnected() {
 		return isOutputConnected() || isPullConnected();
 	}
 
 	protected final boolean isOutputConnected() {
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			if (nodeList.size() > 0) {
 				return true;
 			}
 		}
 		return false;
 	}
-	
+
 	protected final boolean isPullConnected() {
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			if (nodeList.size() > 0) {
 				return true;
 			}
@@ -165,21 +166,21 @@ public abstract class DataFlowNode {
 
 		return pull(null);
 	}
-	
+
 	protected ResultData[] pull(Object parameter) {
 		if (!mIsEnabled) {
 			return null;
 		}
 
 		int numResults = 0;
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			numResults += nodeList.size();
 		}
 		ResultData[] results = new ResultData[numResults];
 		int resultsIndex = 0;
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
 				ResultData result = node.processPull(parameter);
 				results[resultsIndex++] = result;
@@ -187,13 +188,13 @@ public abstract class DataFlowNode {
 		}
 		return results;
 	}
-	
+
 	protected ResultData[] pull(String port, Object parameter) {
 		if (!mIsEnabled) {
 			return null;
 		}
 
-		LinkedList<DataFlowNode> nodeList = mPullPortMap.get(port);
+		List<DataFlowNode> nodeList = mPullPortMap.get(port);
 		if (nodeList == null) {
 			return null;
 		}
@@ -205,19 +206,19 @@ public abstract class DataFlowNode {
 		}
 		return results;
 	}
-	
+
 	protected ResultData getParameterizedResult(Object parameter, String name, String type, Object inputData, int length, long timestamp) {
 		return null;
 	}
-	
+
 	protected final void output(String name, String type, Object data, int length, long timestamp) {
 		if (!mIsEnabled) {
 			return;
 		}
-		
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
 			Object parameter = mOutPortParameterMap.get(entry.getKey());
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+			List<DataFlowNode> nodeList = entry.getValue();
 			if (parameter == null) {
 				for (DataFlowNode node: nodeList) {
 					//DebugHelper.log(mSimpleNodeName, mNodeName + " -> " + node.mNodeName);
@@ -234,13 +235,13 @@ public abstract class DataFlowNode {
 			}
 		}
 	}
-		
+
 	protected final void output(String port, String name, String type, Object data, int length, long timestamp) {
 		if (!mIsEnabled) {
 			return;
 		}
-		
-		LinkedList<DataFlowNode> nodeList = mOutPortMap.get(port);
+
+		List<DataFlowNode> nodeList = mOutPortMap.get(port);
 		Object parameter = mOutPortParameterMap.get(port);
 		if (parameter == null) {
 			for (DataFlowNode node: nodeList) {
@@ -277,14 +278,14 @@ public abstract class DataFlowNode {
 		}
 	}*/
 
-	public LinkedList<DataFlowNode> getParents() {
+	public List<DataFlowNode> getParents() {
 		return mParentList;
 	}
-	
+
 	public boolean isEnabled() {
 		return mIsEnabled;
 	}
-	
+
 	private void enableParents() {
 		if (mIsEnabled) {
 			return;
@@ -300,21 +301,21 @@ public abstract class DataFlowNode {
 			}
 		}
 	}
-	
+
 	private void enableChildren() {
 		if (mIsEnabled) {
 			return;
 		}
 		mIsEnabled = true;
 		DebugHelper.log(TAG, this.toString() + " enabled.");
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
 				node.enableChildren();
 			}
 		}
 	}
-	
+
 	public void enable() {
 		if (mIsEnabled) {
 			return;
@@ -322,8 +323,8 @@ public abstract class DataFlowNode {
 		mIsEnabled = true;
 		DebugHelper.log(TAG, this.toString() + " initiate enabling..");
 		// enabling children
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
 				node.enableChildren();
 			}
@@ -338,12 +339,12 @@ public abstract class DataFlowNode {
 			}
 		}
 	}
-	
+
 	private void disableChildren() {
 		if (!mIsEnabled) {
 			return;
 		}
-		
+
 		// check if all parents are disabled
 		for (DataFlowNode node: mParentList) {
 			if (node.isEnabled()) {
@@ -352,24 +353,24 @@ public abstract class DataFlowNode {
 		}
 		mIsEnabled = false;
 		DebugHelper.log(TAG, this.toString() + " disabled.");
-		
+
 		// disable child nodes
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
 				node.disableChildren();
 			}
 		}
 	}
-	
+
 	private void disableParents() {
 		if (!mIsEnabled) {
 			return;
 		}
-		
+
 		// check if all children is disabled.
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
 				if (node.isEnabled()) {
 					return;
@@ -378,12 +379,12 @@ public abstract class DataFlowNode {
 		}
 		mIsEnabled = false;
 		DebugHelper.log(TAG, this.toString() + " disabled.");
-		
+
 		// if this is seed node
 		if (this instanceof SeedNode) {
 			stopSensor();
 		}
-		
+
 		//disable parents
 		for (DataFlowNode node: mParentList) {
 			node.disableParents();
@@ -396,7 +397,7 @@ public abstract class DataFlowNode {
 		}
 		mIsEnabled = false;
 		DebugHelper.log(TAG, this.toString() + " initiate disabling..");
-		
+
 		// if this is seed node
 		if (this instanceof SeedNode) {
 			stopSensor();
@@ -408,29 +409,29 @@ public abstract class DataFlowNode {
 		}
 
 		//disable children
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
 				node.disableChildren();
 			}
 		}
 	}
-	
+
 	public void remove(Map<String, DataFlowNode> nodeNameMap, Map<Integer, SeedNode> seedNodeMap) {
 		// remove this from parents
 		for (DataFlowNode node: mParentList) {
 			node.removeChild(this, nodeNameMap, seedNodeMap);
 		}
-		
+
 		// remove children
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
 				node.removeParent(this, nodeNameMap, seedNodeMap);
 			}
 			nodeList.clear();
 		}
-		
+
 		// if this is seed node
 		if (this instanceof SeedNode) {
 			stopSensor();
@@ -446,53 +447,53 @@ public abstract class DataFlowNode {
 			DebugHelper.log(TAG, "Node: " + mNodeName + " removed.");
 		}
 	}
-	
+
 	public void removeChild(DataFlowNode child, Map<String, DataFlowNode> nodeNameMap, Map<Integer, SeedNode> seedNodeMap) {
 		// remove child
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			nodeList.remove(child);
 		}
 
 		// check if all children are removed.
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			if (nodeList.size() > 0) {
 				return;
 			}
 		}
-		
+
 		// remove this, too
 		remove(nodeNameMap, seedNodeMap);
 	}
 
 	private void removeParent(DataFlowNode parent, Map<String, DataFlowNode> nodeNameMap, Map<Integer, SeedNode> seedNodeMap) {
 		mParentList.remove(parent);
-		
+
 		// check if all parents are removed
 		if (mParentList.size() > 0) {
 			return;
 		}
-		
+
 		// remove this, too
 		remove(nodeNameMap, seedNodeMap);
 	}
-	
+
 	// implemented by SeedNodes
 	protected void stopSensor() {
 	}
-	
+
 	protected void startSensor() {
 	}
-	
+
 	protected String processParentNodeName(String parentNodeName) {
 		return "";
 	}
-	
+
 	protected String getParameterName(Object parameter) {
 		return "";
 	}
-	
+
 	protected void configurePushNodeName(Map<String, DataFlowNode> nodeNameMap, String parentNodeName) {
 		String nodeName = processParentNodeName(parentNodeName) + "|" + mSimpleNodeName;
 		if (mNodeName == null) {
@@ -503,9 +504,9 @@ public abstract class DataFlowNode {
 			}
 		}
 		nodeNameMap.put(mNodeName, this);
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
 			Object parameter = mOutPortParameterMap.get(entry.getKey());
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+			List<DataFlowNode> nodeList = entry.getValue();
 			if (parameter == null) {
 				for (DataFlowNode node: nodeList) {
 					node.configurePushNodeName(nodeNameMap, mNodeName);
@@ -517,22 +518,22 @@ public abstract class DataFlowNode {
 				}
 			}
 		}
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
 				node.configurePullNodeName(nodeNameMap);
 			}
 		}
 	}
-	
+
 	protected String configurePullNodeName(Map<String, DataFlowNode> nodeNameMap) {
 		if (mNodeName != null) {
 			DebugHelper.log(TAG, mNodeName);
 			return mNodeName;
 		}
 		ArrayList<String> nodeNameCandidates = new ArrayList<String>();
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
 				String parentNodeName = node.configurePullNodeName(nodeNameMap);
 				DebugHelper.log(TAG, parentNodeName);
@@ -558,11 +559,11 @@ public abstract class DataFlowNode {
 		nodeNameMap.put(mNodeName, this);
 		return mNodeName;
 	}
-	
+
 	public String getName() {
 		return mNodeName;
 	}
-	
+
 	public void resetConnection() {
 		mOutPortMap.clear();
 		mPullPortMap.clear();
@@ -571,10 +572,10 @@ public abstract class DataFlowNode {
 		addOutputPort(DEFAULT_PORT_NAME, null);
 		addPullPort(DEFAULT_PORT_NAME);
 	}
-	
+
 	public boolean isPushConnected(DataFlowNode node) {
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode curNode: nodeList) {
 				if (curNode == node) {
 					return true;
@@ -583,10 +584,10 @@ public abstract class DataFlowNode {
 		}
 		return false;
 	}
-	
+
 	public boolean isPullConnected(DataFlowNode node) {
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode curNode: nodeList) {
 				if (curNode == node) {
 					return true;
@@ -595,11 +596,11 @@ public abstract class DataFlowNode {
 		}
 		return false;
 	}
-	
+
 	public boolean isPushParameterizedConnected(DataFlowNode node, String portName) {
-		for (Map.Entry<String, LinkedList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
 			String curPortName = entry.getKey();
-			LinkedList<DataFlowNode> nodeList = entry.getValue();
+			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode curNode: nodeList) {
 				if (curNode == node && curPortName == portName) {
 					return true;
@@ -608,27 +609,27 @@ public abstract class DataFlowNode {
 		}
 		return false;
 	}
-	
+
 	/*public void reconnect(DataFlowNode node) {
 		mOutPortMap = node.getOutPortMap();
 		mOutPortParameterMap = node.getOutPortParameterMap();
 		mPullPortMap = node.getPullPortMap();
 		mParentList = node.getParentList();
 	}*/
-	
-	public Map<String, LinkedList<DataFlowNode>> getOutPortMap() {
+
+	public Map<String, CopyOnWriteArrayList<DataFlowNode>> getOutPortMap() {
 		return mOutPortMap;
 	}
-	
+
 	public Map<String, Object> getOutPortParameterMap() {
 		return mOutPortParameterMap;
 	}
-	
-	public Map<String, LinkedList<DataFlowNode>> getPullPortMap() {
+
+	public Map<String, CopyOnWriteArrayList<DataFlowNode>> getPullPortMap() {
 		return mPullPortMap;
 	}
-	
-	public LinkedList<DataFlowNode> getParentList() {
+
+	public List<DataFlowNode> getParentList() {
 		return mParentList;
 	}
 }

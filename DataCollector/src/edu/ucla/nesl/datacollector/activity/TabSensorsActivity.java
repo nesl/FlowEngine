@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -27,6 +28,8 @@ import edu.ucla.nesl.flowengine.SensorType;
 
 public class TabSensorsActivity extends Activity {
 
+	private Context context = this;
+	
 	private SensorItemsAdapter sensorItemsAdapter;
 	private ListView sensorListView;
 	private List<Device> sensors;
@@ -166,11 +169,17 @@ public class TabSensorsActivity extends Activity {
 						CheckBox cb = (CheckBox) v;
 						Device device = (Device) cb.getTag();
 						device.setEnabled(cb.isChecked());
+						
 						Intent intent = new Intent(getApplicationContext(), DataService.class);
 						intent.putExtra(DataService.REQUEST_TYPE, DataService.CHANGE_SUBSCRIPTION);
 						intent.putExtra(DataService.EXTRA_SENSOR_NAME, device.getDeviceName());
 						intent.putExtra(DataService.EXTRA_IS_ENABLED, device.isEnabled());
 						startService(intent);
+						
+						SharedPreferences settings = context.getSharedPreferences(Const.PREFS_NAME, 0);
+						SharedPreferences.Editor editor = settings.edit();
+						editor.putBoolean(device.getDeviceName(), device.isEnabled());
+						editor.commit();
 					}
 				});
 				

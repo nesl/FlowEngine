@@ -8,8 +8,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import edu.ucla.nesl.flowengine.node.ActivityGraphControl;
@@ -73,7 +73,7 @@ public class GraphConfiguration {
 		node.remove(mNodeNameMap, mSeedNodeMap);
 
 		// change flags
-		List<String> nodeNames = removedApp.getSubscribedNodeNames();
+		Set<String> nodeNames = removedApp.getSubscribedNodeNames();
 		for (String nodeName: nodeNames) {
 			if (nodeName.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
 				// remove ActivityGraphControl node

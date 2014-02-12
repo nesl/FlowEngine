@@ -1,14 +1,15 @@
 package edu.ucla.nesl.flowengine;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import edu.ucla.nesl.flowengine.aidl.ApplicationInterface;
 import edu.ucla.nesl.flowengine.node.Publish;
 
 public class Application {
 	private ApplicationInterface mAppInterface;
-	private List<String> mSubscribedNodeNames = new ArrayList<String>();
+	private Set<String> mSubscribedNodeNames = new HashSet<String>();
 	private Publish mPublishNode;
 	
 	public Application(int appId, ApplicationInterface appInterface) {
@@ -28,7 +29,7 @@ public class Application {
 		return mPublishNode;
 	}
 	
-	public List<String> getSubscribedNodeNames() {
+	public Set<String> getSubscribedNodeNames() {
 		return mSubscribedNodeNames;
 	}
 	

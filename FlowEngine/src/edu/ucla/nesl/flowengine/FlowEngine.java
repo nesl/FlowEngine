@@ -1,8 +1,8 @@
 package edu.ucla.nesl.flowengine;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -305,7 +305,7 @@ public class FlowEngine extends Service {
 
 		@Override
 		public String[] getSubscribedNodeNames(int appId) throws RemoteException {
-			List<String> sensorList = mApplicationMap.get(appId).getSubscribedNodeNames();
+			Set<String> sensorList = mApplicationMap.get(appId).getSubscribedNodeNames();
 			if (sensorList.size() > 0) {
 				return sensorList.toArray(new String[sensorList.size()]);
 			} else {

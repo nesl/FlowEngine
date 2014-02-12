@@ -572,13 +572,18 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		
 		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
 
-		readPropertyFile();
-
-		if (bluetoothAddr == null) {
-			mNotification.showNotificationNow(NOTI_TITLE, "No bluetooth device setup.");
-		} else {
-			tryBindToFlowEngineService();
-		}
+		do {
+			readPropertyFile();
+			if (bluetoothAddr == null) {
+				try {
+					Thread.sleep(RETRY_INTERVAL);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		} while (bluetoothAddr == null);
+		
+		tryBindToFlowEngineService();
 	}
 
 	@Override

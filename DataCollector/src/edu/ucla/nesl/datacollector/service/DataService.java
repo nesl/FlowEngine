@@ -7,6 +7,7 @@ import android.app.Service;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -81,8 +82,23 @@ public class DataService extends Service {
 				e.printStackTrace();
 			}
 		}
+		
+		processStoredSubscriptionStatus();
 	}
-	
+
+	private void processStoredSubscriptionStatus() {
+		SharedPreferences settings = getSharedPreferences(Const.PREFS_NAME, 0);
+		
+		for (String sensorName : Device.sensorNames) {
+			boolean isEnabled = settings.getBoolean(sensorName, false);	
+			Intent intent = new Intent(getApplicationContext(), DataService.class);
+			intent.putExtra(DataService.REQUEST_TYPE, DataService.CHANGE_SUBSCRIPTION);
+			intent.putExtra(DataService.EXTRA_SENSOR_NAME, sensorName);
+			intent.putExtra(DataService.EXTRA_IS_ENABLED, isEnabled);
+			startService(intent);
+		}
+	}
+
 	@Override
 	public void onDestroy() {
 		Log.d(Const.TAG, "onDestroy()");

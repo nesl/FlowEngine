@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import edu.ucla.nesl.datacollector.Const;
+import edu.ucla.nesl.datacollector.Device;
 import edu.ucla.nesl.datacollector.R;
 import edu.ucla.nesl.datacollector.service.DataService;
 import edu.ucla.nesl.datacollector.tools.Tools;
@@ -52,6 +53,8 @@ public class MainActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		startService(new Intent(this, DataService.class));
+
 		Intent intent = getIntent();
 		Bundle bundle = intent.getExtras();
 
@@ -70,9 +73,6 @@ public class MainActivity extends Activity {
 			if (isFirst) {
 				Tools.showAlertDialog(this, "Welcome", "Welcome to Data Collector! You've launched Data Collector for the first time, so let's go through inital setup process.", welcomeListener);
 			} else {
-				// Start some services
-				startService(new Intent(this, DataService.class));
-				
 				// Start login activity
 				intent = new Intent(this, LoginActivity.class);
 				startActivityForResult(intent, REQUEST_CODE_NORMAL);			
