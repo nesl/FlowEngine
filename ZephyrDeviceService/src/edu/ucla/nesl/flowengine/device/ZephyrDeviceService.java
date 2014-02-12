@@ -36,7 +36,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	private static final String TAG = ZephyrDeviceService.class.getSimpleName();
 
 	private static final int RETRY_INTERVAL = 5000; // ms
-	
+
 	private static final String NOTI_TITLE = "Zephyr Device Service";
 	private static final String FLOW_ENGINE_SERVICE_NAME = "edu.ucla.nesl.flowengine.FlowEngine";
 	private static final String BLUETOOTH_SERVICE_UUID = "00001101-0000-1000-8000-00805f9b34fb";
@@ -266,10 +266,10 @@ public class ZephyrDeviceService extends Service implements Runnable {
 					int skinTemp = (receivedBytes[16]&0xFF) | ((receivedBytes[17]&0xFF)<<8);
 					int battery = receivedBytes[40] & 0xFF;
 					int buttonWorn = receivedBytes[41] & 0xFF; 
-						//sample interval: 1s
-						mAPI.pushInt(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, timestamp);
-						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BATTERY, battery, timestamp);
-						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, buttonWorn, timestamp);
+					//sample interval: 1s
+					mAPI.pushInt(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, timestamp);
+					mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BATTERY, battery, timestamp);
+					mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, buttonWorn, timestamp);
 				} else if (msgID == 0x21) {
 					//Log.d(TAG, "Received Breathing Waveform Packet");
 					int[] breathingData = new int[18];
@@ -289,8 +289,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 
 					//breathingData = mFakeRIPData[mFakeRIPDataIndex];
 
-						// sample interval: 56ms
-						mAPI.pushIntArray(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
+					// sample interval: 56ms
+					mAPI.pushIntArray(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
 
 					//mFakeRIPDataIndex++;
 					//if (mFakeRIPDataIndex >= mFakeRIPData.length) {
@@ -320,8 +320,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 					//	dump += Integer.toString(ecgData[i]) + ", ";
 					//Log.d(TAG, "ECG Data: " + dump);
 
-						// sample iterval: 4ms
-						mAPI.pushIntArray(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
+					// sample iterval: 4ms
+					mAPI.pushIntArray(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
 				} else if (msgID == 0x25) {
 					//Log.d(TAG, "Received Accelerometer Packet");
 					int[] accData = new int[60];
@@ -354,8 +354,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 						accSample[1] = convertADCtoG(accData[i+1]);
 						accSample[2] = convertADCtoG(accData[i+2]);
 						//Log.d(TAG, "Acc: " + accSample[0] + ", " + accSample[1] + ", " + accSample[2]);
-							// sample interval: 20ms
-							mAPI.pushDoubleArray(mDeviceID, SensorType.CHEST_ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
+						// sample interval: 20ms
+						mAPI.pushDoubleArray(mDeviceID, SensorType.CHEST_ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
 					}
 				} else if (msgID == 0x23 ) {
 					//Log.d(TAG, "Recevied lifesign from Zephyr.");
@@ -397,7 +397,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 					Log.d(TAG, "Trying to reconnect(" + numRetries + ")..");
 					numRetries += 1;
 					try {
-						Thread.sleep(1000);
+						Thread.sleep(RETRY_INTERVAL);
 					} catch (InterruptedException e1) {
 						e1.printStackTrace();
 					}
@@ -421,7 +421,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		mSocket = null;
 		mIsStopRequest = false;
 		mReceiveThread = null;
-		Log.d(TAG, "Receive thread stopped.");
+		mNotification.showNotificationNow("Receiving stopped.");
 	}
 
 	private void stop() {
@@ -444,7 +444,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 				mNotification.showNotificationNow("Retrying..");
 				Log.d(TAG, "Retrying..");
 				try {
-					Thread.sleep(1000);
+					Thread.sleep(RETRY_INTERVAL);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -528,6 +528,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+			mAPI = null;
 			tryBindToFlowEngineService();
 		}
 	};
@@ -566,13 +567,14 @@ public class ZephyrDeviceService extends Service implements Runnable {
 
 	@Override
 	public void onCreate() {
-		super.onCreate();
-
-		Log.d(TAG, "Zephyr service creating..");
-		
 		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
+		super.onCreate();
+	}
 
-		do {
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+
+		while (bluetoothAddr == null) {
 			readPropertyFile();
 			if (bluetoothAddr == null) {
 				try {
@@ -581,13 +583,12 @@ public class ZephyrDeviceService extends Service implements Runnable {
 					e.printStackTrace();
 				}
 			}
-		} while (bluetoothAddr == null);
-		
-		tryBindToFlowEngineService();
-	}
+		} 
 
-	@Override
-	public int onStartCommand(Intent intent, int flags, int startId) {
+		if (mAPI == null) {
+			tryBindToFlowEngineService();
+		}
+		
 		return super.onStartCommand(intent, flags, startId);
 	}
 

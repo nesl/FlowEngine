@@ -26,7 +26,7 @@ import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
 
 public class PhoneSensorDeviceService extends Service implements SensorEventListener, LocationListener {
-	
+
 	private static final String TAG = PhoneSensorDeviceService.class.getSimpleName();
 
 	private static final int RETRY_INTERVAL = 5000; // ms
@@ -123,6 +123,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+			mAPI = null;
 			tryBindToFlowEngineService();
 		}
 	};
@@ -231,21 +232,21 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		//Debug.startMethodTracing("AccelerometerService");
 		//Debug.startAllocCounting();
 
-		super.onCreate();
-
-		Log.d(TAG, "Phone sensor service creating..");
-
 		//mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
 
 		mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 		mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-		tryBindToFlowEngineService();
+		super.onCreate();
 	}
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		if (mAPI == null) {
+			tryBindToFlowEngineService();
+		}
+
 		return super.onStartCommand(intent, flags, startId);
 	}
 

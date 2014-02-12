@@ -52,8 +52,6 @@ public class DataService extends Service {
 	
 	@Override
 	public void onCreate() {
-		Log.d(Const.TAG, "Trying to bind to flowengine service");
-		tryBindToFlowEngineService();
 		super.onCreate();
 	}
 
@@ -82,8 +80,6 @@ public class DataService extends Service {
 				e.printStackTrace();
 			}
 		}
-		
-		processStoredSubscriptionStatus();
 	}
 
 	private void processStoredSubscriptionStatus() {
@@ -91,6 +87,7 @@ public class DataService extends Service {
 		
 		for (String sensorName : Device.sensorNames) {
 			boolean isEnabled = settings.getBoolean(sensorName, false);	
+			Log.d(Const.TAG, sensorName + ": " + isEnabled);
 			Intent intent = new Intent(getApplicationContext(), DataService.class);
 			intent.putExtra(DataService.REQUEST_TYPE, DataService.CHANGE_SUBSCRIPTION);
 			intent.putExtra(DataService.EXTRA_SENSOR_NAME, sensorName);
@@ -124,9 +121,7 @@ public class DataService extends Service {
 		
 		if (bundle == null && mAPI == null) {
 			Log.d(Const.TAG, "Trying to bind to flowengine service");
-			Intent i = new Intent(Const.FLOW_ENGINE_APPLICATION_SERVICE);
-			startService(i);
-			bindService(i, mServiceConnection, 0);
+			tryBindToFlowEngineService();
 		}
 		
 		if (bundle != null && mAPI != null) {
@@ -205,6 +200,7 @@ public class DataService extends Service {
 			mAPI = FlowEngineAppAPI.Stub.asInterface(service);
 			try {
 				mAppID = mAPI.register(mAppInterface);
+				processStoredSubscriptionStatus();
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
