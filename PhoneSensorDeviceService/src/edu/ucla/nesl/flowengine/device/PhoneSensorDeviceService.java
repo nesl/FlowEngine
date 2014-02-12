@@ -259,7 +259,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
 		mWakeLock.setReferenceCounted(false);
-		
+
 		super.onCreate();
 	}
 
@@ -376,7 +376,9 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	}
 
 	private void acquireWakeLock() {
-		mWakeLock.acquire();
+		if (!mWakeLock.isHeld()) {
+			mWakeLock.acquire();
+		}
 	}
 
 	private void checkedReleaseWakeLock() {
@@ -384,7 +386,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 			releaseWakeLock();
 		}
 	}
-	
+
 	private void releaseWakeLock() {
 		if (mWakeLock.isHeld()) {
 			mWakeLock.release();

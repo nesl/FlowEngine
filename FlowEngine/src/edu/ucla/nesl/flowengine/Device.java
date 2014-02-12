@@ -1,11 +1,9 @@
 package edu.ucla.nesl.flowengine;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
-import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Device {
 	private DeviceAPI mInterface;

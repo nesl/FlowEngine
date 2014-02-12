@@ -21,6 +21,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
@@ -34,7 +35,7 @@ import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
 import edu.ucla.nesl.flowengine.device.zephyr.R;
 import edu.ucla.nesl.util.NotificationHelper;
 
-public class ZephyrDeviceService extends Service implements Runnable {
+public class ZephyrDeviceService extends Service {
 	private static final String TAG = ZephyrDeviceService.class.getSimpleName();
 
 	private static final int RETRY_INTERVAL = 5000; // ms
@@ -49,11 +50,20 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	private static final int MSG_STOP = 1;
 	private static final int MSG_START = 2;
 	private static final int MSG_KILL = 3;
+	private static final int MSG_START_SENSOR = 4;
+	private static final int MSG_STOP_SENSOR = 5;
 
 	private static final byte START_ECG_PACKET[] = { 0x02, 0x16, 0x01, 0x01, 0x5e, 0x03 };
 	private static final byte START_RIP_PACKET[] = { 0x02, 0x15, 0x01, 0x01, 0x5e, 0x03};
 	private static final byte START_ACCELEROMETER_PACKET[] = { 0x02, 0x1e, 0x01, 0x01, 0x5e, 0x03 };
 	private static final byte START_GENERAL_PACKET[] = { 0x02, 0x14, 0x01, 0x01, 0x5e, 0x03 };
+
+	private static byte STOP_ECG_PACKET[] = { 0x02, 0x16, 0x01, 0x00, 0x00, 0x03 };
+	private static byte STOP_RIP_PACKET[] = { 0x02, 0x15, 0x01, 0x00, 0x00, 0x03};
+	private static byte STOP_ACCELEROMETER_PACKET[] = { 0x02, 0x1e, 0x01, 0x00, 0x00, 0x03 };
+	private static byte STOP_GENERAL_PACKET[] = { 0x02, 0x14, 0x01, 0x00, 0x00, 0x03 };
+
+	private static final String BUNDLE_SENSOR_ID = "sensor_id";
 
 	//private byte SET_RTC_PACKET[];
 
@@ -78,6 +88,42 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	};
 	private int mFakeRIPDataIndex = 0;
 
+	private boolean mIsSkinTemp = false;
+	private boolean mIsBattery = false;
+	private boolean mIsButtonWorn = false;
+	private boolean mIsECG = false;
+	private boolean mIsRIP = false;
+	private boolean mIsAccelerometer = false;
+	
+	@Override
+	public void onCreate() {
+		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
+	
+		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+		mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+		mWakeLock.setReferenceCounted(false);
+	
+		super.onCreate();
+	}
+
+	private void unflagAllSensor() {
+		mIsSkinTemp = false;
+		mIsBattery = false;
+		mIsButtonWorn = false;
+		mIsECG = false;
+		mIsRIP = false;
+		mIsAccelerometer = false;
+	}
+	
+	private void flagAllSensor() {
+		mIsSkinTemp = true;
+		mIsBattery = true;
+		mIsButtonWorn = true;
+		mIsECG = true;
+		mIsRIP = true;
+		mIsAccelerometer = true;
+	}
+	
 	private boolean connect(String deviceAddress) {
 		BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
 		BluetoothDevice device = btAdapter.getRemoteDevice(deviceAddress);
@@ -115,8 +161,6 @@ public class ZephyrDeviceService extends Service implements Runnable {
 			return false;
 		}
 
-		//Zephyr initialization.
-		Log.d(TAG, "Initializing Zephyr...");
 		try {
 			Thread.sleep(1500);
 		} catch (InterruptedException e) {
@@ -135,23 +179,19 @@ public class ZephyrDeviceService extends Service implements Runnable {
 			return false;
 		}
 
-		try {
-			//SET_RTC_PACKET = generateSetRTCMessage();
-			//mOutputStream.write(SET_RTC_PACKET);
-			mOutputStream.write(START_ECG_PACKET);
-			mOutputStream.write(START_RIP_PACKET);
-			mOutputStream.write(START_ACCELEROMETER_PACKET);
-			mOutputStream.write(START_GENERAL_PACKET);
-		} 
-		catch (IOException e)
-		{
-			Log.d(TAG, "IOException from OutputStream..");
-			e.printStackTrace();
-			mSocket = null;
-			return false;
+		if (mIsECG) {
+			sendStartECGPacket();
 		}
-		Log.d(TAG, "Init successful.");
-
+		if (mIsRIP) {
+			sendStartRIPPacket();
+		}
+		if (mIsAccelerometer) {
+			sendStartAccPacket();
+		}
+		if (mIsSkinTemp || mIsBattery || mIsButtonWorn) {
+			sendStartGeneralPacket();
+		}
+		
 		return true;
 	}
 
@@ -234,231 +274,363 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		return (sample / 1023.0) * 32.0 - 16.0;
 	}
 
-	@Override
-	public void run() {
-		final byte STX = 2;
-		long lastTime = System.currentTimeMillis();
-		byte[] receivedBytes = new byte[128];
+	private Runnable receiveRunnable = new Runnable() {
 
-		while (!mIsStopRequest) {
-			try {
-				// Receiving STX
-				do {
-					mInputStream.read(receivedBytes, 0, 1);
-				} while (receivedBytes[0] != STX);
+		@Override
+		public void run() {
+			final byte STX = 2;
+			long lastTime = System.currentTimeMillis();
+			byte[] receivedBytes = new byte[128];
 
-				// Receiving Msg ID and DLC
-				mInputStream.read(receivedBytes, 1, 2);
-				int msgID = receivedBytes[1] & 0xFF;
+			while (!mIsStopRequest) {
+				try {
+					// Receiving STX
+					do {
+						mInputStream.read(receivedBytes, 0, 1);
+					} while (receivedBytes[0] != STX);
 
-				// Receiving payload, CRC, and ACK
-				mInputStream.read(receivedBytes, 3, receivedBytes[2]+2);
+					// Receiving Msg ID and DLC
+					mInputStream.read(receivedBytes, 1, 2);
+					int msgID = receivedBytes[1] & 0xFF;
 
-				//int numBytes = receivedBytes[2]+5;
-				//Log.d(TAG, "Received " + Integer.toString(numBytes) + " bytes: " + getHex(receivedBytes, receivedBytes[2]+5));
+					// Receiving payload, CRC, and ACK
+					mInputStream.read(receivedBytes, 3, receivedBytes[2]+2);
 
-				// parsing receivedBytes
-				if (msgID == 0x20) {
-					//Log.d(TAG, "Received General Data Packet");
-					long timestamp = 0;
-					for (int i=8, j=0; i<12; i++, j+=8) {
-						timestamp |= (receivedBytes[i]&0xFF) << j;
-					}
-					//Log.d(TAG, "timestamp: " + timestamp);
-					//int heartRate = (receivedBytes[12]&0xFF) | ((receivedBytes[13]&0xFF)<<8);
-					//int respirationRate = (receivedBytes[14]&0xFF) | ((receivedBytes[15]&0xFF)<<8);
-					int skinTemp = (receivedBytes[16]&0xFF) | ((receivedBytes[17]&0xFF)<<8);
-					int battery = receivedBytes[40] & 0xFF;
-					int buttonWorn = receivedBytes[41] & 0xFF; 
-					//sample interval: 1s
-					mAPI.pushInt(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, timestamp);
-					mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BATTERY, battery, timestamp);
-					mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, buttonWorn, timestamp);
-				} else if (msgID == 0x21) {
-					//Log.d(TAG, "Received Breathing Waveform Packet");
-					int[] breathingData = new int[18];
-					long timestamp = 0;
-					for (int i=8, j=0; i<12; i++, j+=8) {
-						timestamp |= (receivedBytes[i]&0xFF) << j;
-					}
-					for (int i=12, j=0; i<35; i+=5)	{
-						breathingData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
-						if (i+2 < 35)
-							breathingData[j++] = ((receivedBytes[i+1]&0xFF)>>2) | (((receivedBytes[i+2]&0xFF)&0x0F) << 6);
-						if (i+3 < 35)
-							breathingData[j++] = ((receivedBytes[i+2]&0xFF)>>4) | (((receivedBytes[i+3]&0xFF)&0x3F) << 4);
-						if (i+4 < 35)
-							breathingData[j++] = ((receivedBytes[i+3]&0xFF)>>6) | ((receivedBytes[i+4]&0xFF) << 2);
-					}
+					//int numBytes = receivedBytes[2]+5;
+					//Log.d(TAG, "Received " + Integer.toString(numBytes) + " bytes: " + getHex(receivedBytes, receivedBytes[2]+5));
 
-					//breathingData = mFakeRIPData[mFakeRIPDataIndex];
+					// parsing receivedBytes
+					if (msgID == 0x20) {
+						Log.d(TAG, "Received General Data Packet");
+						long timestamp = 0;
+						for (int i=8, j=0; i<12; i++, j+=8) {
+							timestamp |= (receivedBytes[i]&0xFF) << j;
+						}
+						//Log.d(TAG, "timestamp: " + timestamp);
+						//int heartRate = (receivedBytes[12]&0xFF) | ((receivedBytes[13]&0xFF)<<8);
+						//int respirationRate = (receivedBytes[14]&0xFF) | ((receivedBytes[15]&0xFF)<<8);
+						int skinTemp = (receivedBytes[16]&0xFF) | ((receivedBytes[17]&0xFF)<<8);
+						int battery = receivedBytes[40] & 0xFF;
+						int buttonWorn = receivedBytes[41] & 0xFF; 
+						//sample interval: 1s
+						mAPI.pushInt(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, timestamp);
+						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BATTERY, battery, timestamp);
+						mAPI.pushInt(mDeviceID, SensorType.ZEPHYR_BUTTON_WORN, buttonWorn, timestamp);
+					} else if (msgID == 0x21) {
+						Log.d(TAG, "Received Breathing Waveform Packet");
+						int[] breathingData = new int[18];
+						long timestamp = 0;
+						for (int i=8, j=0; i<12; i++, j+=8) {
+							timestamp |= (receivedBytes[i]&0xFF) << j;
+						}
+						for (int i=12, j=0; i<35; i+=5)	{
+							breathingData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
+							if (i+2 < 35)
+								breathingData[j++] = ((receivedBytes[i+1]&0xFF)>>2) | (((receivedBytes[i+2]&0xFF)&0x0F) << 6);
+							if (i+3 < 35)
+								breathingData[j++] = ((receivedBytes[i+2]&0xFF)>>4) | (((receivedBytes[i+3]&0xFF)&0x3F) << 4);
+							if (i+4 < 35)
+								breathingData[j++] = ((receivedBytes[i+3]&0xFF)>>6) | ((receivedBytes[i+4]&0xFF) << 2);
+						}
 
-					// sample interval: 56ms
-					mAPI.pushIntArray(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
+						//breathingData = mFakeRIPData[mFakeRIPDataIndex];
 
-					//mFakeRIPDataIndex++;
-					//if (mFakeRIPDataIndex >= mFakeRIPData.length) {
-					//	mFakeRIPDataIndex = 0;
-					//}
+						// sample interval: 56ms
+						mAPI.pushIntArray(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
 
-				} else if (msgID == 0x22) {
-					//Log.d(TAG, "Received ECG Waveform Packet");
-					long timestamp = 0;
-					for (int i=8, j=0; i<12; i++, j+=8) {
-						timestamp |= (receivedBytes[i]&0xFF) << j;
-					}
-					//Log.d(TAG, "timestamp: " + timestamp);
-					int[] ecgData = new int[63];
-					for (int i=12, j=0; i<91; i+=5) {
-						ecgData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
-						if (i+2 < 91)
-							ecgData[j++] = ((receivedBytes[i+1]&0xFF)>>2) | (((receivedBytes[i+2]&0xFF)&0x0F) << 6);
-						if (i+3 < 91)
-							ecgData[j++] = ((receivedBytes[i+2]&0xFF)>>4) | (((receivedBytes[i+3]&0xFF)&0x3F) << 4);
-						if (i+4 < 91)
-							ecgData[j++] = ((receivedBytes[i+3]&0xFF)>>6) | ((receivedBytes[i+4]&0xFF) << 2);
-					}
+						//mFakeRIPDataIndex++;
+						//if (mFakeRIPDataIndex >= mFakeRIPData.length) {
+						//	mFakeRIPDataIndex = 0;
+						//}
 
-					//String dump = "";
-					//for (int i=0; i<63; i++)
-					//	dump += Integer.toString(ecgData[i]) + ", ";
-					//Log.d(TAG, "ECG Data: " + dump);
+					} else if (msgID == 0x22) {
+						Log.d(TAG, "Received ECG Waveform Packet");
+						long timestamp = 0;
+						for (int i=8, j=0; i<12; i++, j+=8) {
+							timestamp |= (receivedBytes[i]&0xFF) << j;
+						}
+						//Log.d(TAG, "timestamp: " + timestamp);
+						int[] ecgData = new int[63];
+						for (int i=12, j=0; i<91; i+=5) {
+							ecgData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
+							if (i+2 < 91)
+								ecgData[j++] = ((receivedBytes[i+1]&0xFF)>>2) | (((receivedBytes[i+2]&0xFF)&0x0F) << 6);
+							if (i+3 < 91)
+								ecgData[j++] = ((receivedBytes[i+2]&0xFF)>>4) | (((receivedBytes[i+3]&0xFF)&0x3F) << 4);
+							if (i+4 < 91)
+								ecgData[j++] = ((receivedBytes[i+3]&0xFF)>>6) | ((receivedBytes[i+4]&0xFF) << 2);
+						}
 
-					// sample iterval: 4ms
-					mAPI.pushIntArray(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
-				} else if (msgID == 0x25) {
-					//Log.d(TAG, "Received Accelerometer Packet");
-					int[] accData = new int[60];
-					long timestamp = 0;
-					for (int i=8, j=0; i<12; i++, j+=8) {
-						timestamp |= (receivedBytes[i]&0xFF) << j;
-					}
-					for (int i=12, j=0; i<87; i+=5) {
-						accData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
-						if (i+2 < 87)
-							accData[j++] = ((receivedBytes[i+1]&0xFF)>>2) | (((receivedBytes[i+2]&0xFF)&0x0F) << 6);
-						if (i+3 < 87)
-							accData[j++] = ((receivedBytes[i+2]&0xFF)>>4) | (((receivedBytes[i+3]&0xFF)&0x3F) << 4);
-						if (i+4 < 87)
-							accData[j++] = ((receivedBytes[i+3]&0xFF)>>6) | ((receivedBytes[i+4]&0xFF) << 2);
-					}
+						//String dump = "";
+						//for (int i=0; i<63; i++)
+						//	dump += Integer.toString(ecgData[i]) + ", ";
+						//Log.d(TAG, "ECG Data: " + dump);
 
-					//int[] accX = new int[20], accY = new int[20], accZ = new int[20];
-					/*for (int i=0, j=0; i<60; i+=3) {
-	    				accX[j] = accData[i];
-	    				accY[j] = accData[i+1];
-	    				accZ[j] = accData[i+2];
-	    				j+=1;
-	    			}*/
+						// sample iterval: 4ms
+						mAPI.pushIntArray(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
+					} else if (msgID == 0x25) {
+						Log.d(TAG, "Received Accelerometer Packet");
+						int[] accData = new int[60];
+						long timestamp = 0;
+						for (int i=8, j=0; i<12; i++, j+=8) {
+							timestamp |= (receivedBytes[i]&0xFF) << j;
+						}
+						for (int i=12, j=0; i<87; i+=5) {
+							accData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
+							if (i+2 < 87)
+								accData[j++] = ((receivedBytes[i+1]&0xFF)>>2) | (((receivedBytes[i+2]&0xFF)&0x0F) << 6);
+							if (i+3 < 87)
+								accData[j++] = ((receivedBytes[i+2]&0xFF)>>4) | (((receivedBytes[i+3]&0xFF)&0x3F) << 4);
+							if (i+4 < 87)
+								accData[j++] = ((receivedBytes[i+3]&0xFF)>>6) | ((receivedBytes[i+4]&0xFF) << 2);
+						}
 
-					//Log.d(TAG, "timestamp: " + timestamp);
-					double[] accSample = new double[3];
-					for (int i = 0, j = 0; i < accData.length; i += 3, j++) {
-						accSample[0] = convertADCtoG(accData[i]);
-						accSample[1] = convertADCtoG(accData[i+1]);
-						accSample[2] = convertADCtoG(accData[i+2]);
-						//Log.d(TAG, "Acc: " + accSample[0] + ", " + accSample[1] + ", " + accSample[2]);
-						// sample interval: 20ms
-						mAPI.pushDoubleArray(mDeviceID, SensorType.CHEST_ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
-					}
-				} else if (msgID == 0x23 ) {
-					//Log.d(TAG, "Recevied lifesign from Zephyr.");
-				} else {
-					Log.d(TAG, "Received something else.. msgID: 0x" + Integer.toHexString(msgID));
-				}
+						//int[] accX = new int[20], accY = new int[20], accZ = new int[20];
+						/*for (int i=0, j=0; i<60; i+=3) {
+		    				accX[j] = accData[i];
+		    				accY[j] = accData[i+1];
+		    				accZ[j] = accData[i+2];
+		    				j+=1;
+		    			}*/
 
-				long currTime = System.currentTimeMillis();
-				if (currTime - lastTime > 8000)
-				{
-					// Sending lifesign. (Zephyr requires this at least every 10 seconds)
-					if (mOutputStream != null)
-					{
-						byte lifesign[] = { 0x02, 0x23, 0x00, 0x00, 0x03 };
-						mOutputStream.write(lifesign);
-						//Log.d(TAG, "Sent Lifesign");
+						//Log.d(TAG, "timestamp: " + timestamp);
+						double[] accSample = new double[3];
+						for (int i = 0, j = 0; i < accData.length; i += 3, j++) {
+							accSample[0] = convertADCtoG(accData[i]);
+							accSample[1] = convertADCtoG(accData[i+1]);
+							accSample[2] = convertADCtoG(accData[i+2]);
+							//Log.d(TAG, "Acc: " + accSample[0] + ", " + accSample[1] + ", " + accSample[2]);
+							// sample interval: 20ms
+							mAPI.pushDoubleArray(mDeviceID, SensorType.CHEST_ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
+						}
+					} else if (msgID == 0x23 ) {
+						//Log.d(TAG, "Recevied lifesign from Zephyr.");
 					} else {
-						throw new NullPointerException("mOutputStream is null");
+						Log.d(TAG, "Received something else.. msgID: 0x" + Integer.toHexString(msgID));
 					}
-					lastTime = System.currentTimeMillis();
-				}
-			} catch (IOException e) {
-				Log.d(TAG, "IOException while run()..");
-				e.printStackTrace();
 
+					long currTime = System.currentTimeMillis();
+					if (currTime - lastTime > 8000)
+					{
+						// Sending lifesign. (Zephyr requires this at least every 10 seconds)
+						if (mOutputStream != null)
+						{
+							byte lifesign[] = { 0x02, 0x23, 0x00, 0x00, 0x03 };
+							mOutputStream.write(lifesign);
+							//Log.d(TAG, "Sent Lifesign");
+						} else {
+							throw new NullPointerException("mOutputStream is null");
+						}
+						lastTime = System.currentTimeMillis();
+					}
+				} catch (IOException e) {
+					Log.d(TAG, "IOException while run()..");
+					e.printStackTrace();
+					try {
+						mSocket.close();
+					} catch (IOException e1) {
+					}
+					mSocket = null;
+					
+					Log.d(TAG, "Trying to reconnect(1)..");
+					int numRetries = 2;
+					while (!mIsStopRequest && !connect(bluetoothAddr)) {
+						Log.d(TAG, "Trying to reconnect(" + numRetries + ")..");
+						numRetries += 1;
+						try {
+							Thread.sleep(RETRY_INTERVAL);
+						} catch (InterruptedException e1) {
+							e1.printStackTrace();
+						}
+					}
+				} catch (RemoteException e) {
+					e.printStackTrace();
+					break;
+				}
+			} // end while
+
+			if (mSocket != null) {
 				try {
 					Log.d(TAG, "Closing socket");
 					mSocket.close();
 					Log.d(TAG, "Socket closed");
-				} catch (IOException e1) {
+				} catch (IOException e) {
 					Log.d(TAG, "Failed to close the bt socket");			
-					e1.printStackTrace();
-					mSocket = null;
-					break;
+					e.printStackTrace();
 				}
-				Log.d(TAG, "Trying to reconnect(1)..");
-				int numRetries = 2;
-				while (!mIsStopRequest && !connect(bluetoothAddr)) {
-					Log.d(TAG, "Trying to reconnect(" + numRetries + ")..");
-					numRetries += 1;
-					try {
-						Thread.sleep(RETRY_INTERVAL);
-					} catch (InterruptedException e1) {
-						e1.printStackTrace();
-					}
-				}
-			} catch (RemoteException e) {
-				e.printStackTrace();
-				break;
 			}
-		} // end while
-
-		if (mSocket != null) {
-			try {
-				Log.d(TAG, "Closing socket");
-				mSocket.close();
-				Log.d(TAG, "Socket closed");
-			} catch (IOException e) {
-				Log.d(TAG, "Failed to close the bt socket");			
-				e.printStackTrace();
-			}
+			mSocket = null;
+			mInputStream = null;
+			mOutputStream = null;
+			mIsStopRequest = false;
+			mReceiveThread = null;
+			mNotification.showNotificationNow("Receiving stopped.");
+			releaseWakeLock();
 		}
-		mSocket = null;
-		mIsStopRequest = false;
-		mReceiveThread = null;
-		mNotification.showNotificationNow("Receiving stopped.");
-	}
+	};
 
-	private void stop() {
+	private void stopReceiveThread() {
 		if (mReceiveThread != null && !mIsStopRequest)
 		{
 			mIsStopRequest = true;
-			mNotification.showNotificationNow("Stop receiving..");
+			mNotification.showNotificationNow(NOTI_TITLE, "Stop receiving..");
 		}
-
-		releaseWakeLock();
 	}
 
-	private void start() {
+	private boolean tryToConnect() {
+		Log.d(TAG, "tryToConnect()");
 
 		acquireWakeLock();
 
+		if (bluetoothAddr == null) {
+			mNotification.showNotificationNow(NOTI_TITLE, "Please setup Bluetooth Address.");
+			return false;
+		}
+
 		if (mReceiveThread == null) {
-			mReceiveThread = new Thread(this);
+			mReceiveThread = new Thread(receiveRunnable);
 		}
 
 		if (mSocket == null) {
-			mNotification.showNotificationNow("Connecting to Zephyr..");
+			mNotification.showNotificationNow(NOTI_TITLE, "Connecting to Zephyr..");
 			while (!connect(bluetoothAddr)) {
-				mNotification.showNotificationNow("Retrying to connect to Zephyr...");
+				mNotification.showNotificationNow(NOTI_TITLE, "Retrying to connect to Zephyr...");
 				try {
 					Thread.sleep(RETRY_INTERVAL);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
-			mNotification.showNotificationNow("Connected to Zephyr!");
+			mNotification.showNotificationNow(NOTI_TITLE, "Connected to Zephyr!");
 			mReceiveThread.start();
-		} 
+		}
+		return true;
+	}
+
+	private void sendStartAllSensorsPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(START_ECG_PACKET);
+				mOutputStream.write(START_RIP_PACKET);
+				mOutputStream.write(START_ACCELEROMETER_PACKET);
+				mOutputStream.write(START_GENERAL_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendStartECGPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(START_ECG_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendStartRIPPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(START_RIP_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendStartAccPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(START_ACCELEROMETER_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendStartGeneralPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(START_GENERAL_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendStopAllSensorsPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(STOP_ECG_PACKET);
+				mOutputStream.write(STOP_RIP_PACKET);
+				mOutputStream.write(STOP_ACCELEROMETER_PACKET);
+				mOutputStream.write(STOP_GENERAL_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendStopECGPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(STOP_ECG_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendStopRIPPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(STOP_RIP_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendStopAccPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(STOP_ACCELEROMETER_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendStopGeneralPacket() {
+		if (mOutputStream != null) {
+			try {
+				mOutputStream.write(STOP_GENERAL_PACKET);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
 	}
 
 	private Handler mHandler = new Handler() {
@@ -466,19 +638,105 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		public void handleMessage(Message msg) {
 			switch (msg.what) {
 			case MSG_STOP:
-				stop();
+				unflagAllSensor();
+				handleStopAll();
 				break;
 			case MSG_START:
-				start();
+				flagAllSensor();
+				handleStartAll();
 				break;
 			case MSG_KILL:
 				mThisService.stopSelf();
+				break;
+			case MSG_START_SENSOR:
+				handleStartSensor(((Bundle)msg.obj).getInt(BUNDLE_SENSOR_ID));
+				break;
+			case MSG_STOP_SENSOR:
+				handleStopSensor(((Bundle)msg.obj).getInt(BUNDLE_SENSOR_ID));
 				break;
 			default:
 				super.handleMessage(msg);
 			}
 		}
 	};
+
+	private void handleStopAll() {
+		sendStopAllSensorsPacket();
+		stopReceiveThread();
+	}
+
+	private void handleStopSensor(int sensorId) {
+		switch (sensorId) {
+		case SensorType.ECG:
+			mIsECG = false;
+			sendStopECGPacket();
+			break;
+		case SensorType.RIP:
+			mIsRIP = false;
+			sendStopRIPPacket();
+			break;
+		case SensorType.CHEST_ACCELEROMETER:
+			mIsAccelerometer = false;
+			sendStopAccPacket();
+			break;
+		case SensorType.SKIN_TEMPERATURE:
+			mIsSkinTemp = false;
+			break;
+		case SensorType.ZEPHYR_BATTERY:
+			mIsBattery = false;
+			break;
+		case SensorType.ZEPHYR_BUTTON_WORN:
+			mIsButtonWorn = false;
+			break;
+		}
+		if (!mIsSkinTemp && !mIsBattery && !mIsButtonWorn) {
+			sendStopGeneralPacket();
+		}
+		if (isAllSensorUnflagged()) {
+			stopReceiveThread();
+		}
+	}
+
+	private boolean isAllSensorUnflagged() {
+		return !mIsECG && !mIsRIP && !mIsAccelerometer && !mIsSkinTemp && !mIsBattery && !mIsButtonWorn;
+	}
+
+	private void handleStartAll() {
+		if (tryToConnect()) {
+			sendStartAllSensorsPacket();
+		}
+	}
+
+	private void handleStartSensor(int sensorId) {
+		if (tryToConnect()) {
+			switch (sensorId) {
+			case SensorType.ECG:
+				mIsECG = true;
+				sendStartECGPacket();
+				break;
+			case SensorType.RIP:
+				mIsRIP = true;
+				sendStartRIPPacket();
+				break;
+			case SensorType.CHEST_ACCELEROMETER:
+				mIsAccelerometer = true;
+				sendStartAccPacket();
+				break;
+			case SensorType.SKIN_TEMPERATURE:
+				mIsSkinTemp = true;
+				break;
+			case SensorType.ZEPHYR_BATTERY:
+				mIsBattery = true;
+				break;
+			case SensorType.ZEPHYR_BUTTON_WORN:
+				mIsButtonWorn = true;
+				break;
+			}
+			if (mIsSkinTemp || mIsBattery || mIsButtonWorn) {
+				sendStartGeneralPacket();
+			}
+		}
+	}
 
 	private DeviceAPI.Stub mZephyrDeviceInterface = new DeviceAPI.Stub() {
 		@Override
@@ -495,15 +753,17 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		}
 		@Override
 		public void startSensor(int sensor) throws RemoteException {
-			mHandler.sendMessage(mHandler.obtainMessage(MSG_START));
+			Bundle bundle = new Bundle();
+			bundle.putInt(BUNDLE_SENSOR_ID, sensor);
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_START_SENSOR, bundle));
 		}
 		@Override
 		public void stopSensor(int sensor) throws RemoteException {
-			//TODO: individual sensor stop.
-			mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP));
+			Bundle bundle = new Bundle();
+			bundle.putInt(BUNDLE_SENSOR_ID, sensor);
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_STOP_SENSOR, bundle));
 		}
 	};
-
 
 	private ServiceConnection mServiceConnection = new ServiceConnection() {
 		@Override
@@ -526,7 +786,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		@Override
 		public void onServiceDisconnected(ComponentName name) {
 			Log.i(TAG, "Service connection closed.");
-			stop();
+			stopReceiveThread();
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
@@ -570,17 +830,6 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	}
 
 	@Override
-	public void onCreate() {
-		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
-
-		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-		mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-		mWakeLock.setReferenceCounted(false);
-
-		super.onCreate();
-	}
-
-	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
 		while (bluetoothAddr == null) {
@@ -620,7 +869,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 
 	@Override
 	public void onDestroy() {
-		stop();
+		stopReceiveThread();
 
 		try {
 			if (mAPI != null) {
@@ -635,7 +884,9 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	}
 
 	private void acquireWakeLock() {
-		mWakeLock.acquire();
+		if (!mWakeLock.isHeld()) {
+			mWakeLock.acquire();
+		}
 	}
 
 	private void releaseWakeLock() {
