@@ -81,14 +81,14 @@ public class SeedNode extends DataFlowNode {
 	@Override
 	protected void processInput(String name, String type, Object data, int length, long timestamp) {
 		//DebugHelper.log(TAG, "name: " + name + ", type: " + type + ", length: " + length + ", timestamp: " + timestamp);
-		if (type.equals("String")) {
+		/*if (type.equals("String")) {
 			DebugHelper.log(TAG, (String)data);
-		}
+		}*/
 		/*
 		} else if (name.equals(SensorType.getSensorName(SensorType.ZEPHYR_BUTTON_WORN))) {
 			DebugHelper.log(TAG, name + ": " + (Integer)data);
 		}*/
-		if (name.equals(SensorType.getSensorName(SensorType.ECG))){
+		/*if (name.equals(SensorType.getSensorName(SensorType.ECG))){
 			DebugHelper.log(TAG, name + " " + length + " samples");
 		} else if (name.equals(SensorType.getSensorName(SensorType.RIP))){
 			DebugHelper.log(TAG, name + " " + length + " samples");
@@ -97,7 +97,7 @@ public class SeedNode extends DataFlowNode {
 		} else if (name.equals(SensorType.getSensorName(SensorType.PHONE_GPS))) {
 			double[] gpsdata = (double[])data;
 			DebugHelper.log(TAG, name + ": " + gpsdata[0] + ", " + gpsdata[1] + ", " + gpsdata[2] + ", " + gpsdata[3]);
-		}
+		}*/
 		
 		output(name, type, data, length, timestamp);
 	}

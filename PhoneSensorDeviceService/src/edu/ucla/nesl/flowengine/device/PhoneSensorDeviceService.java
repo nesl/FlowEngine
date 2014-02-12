@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.os.PowerManager;
 import android.os.RemoteException;
 import android.util.Log;
 import edu.ucla.nesl.flowengine.SensorType;
@@ -52,6 +53,11 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	private int	mDeviceID;
 	private boolean mIsFlowEngineConnected = false;
 
+	private boolean mIsAccel = false;
+	private boolean mIsBattery = false;
+	private boolean mIsGPS = false;
+
+	private PowerManager.WakeLock mWakeLock;
 	//private NotificationHelper mNotification;
 
 	private BroadcastReceiver mBatteryReceiver = new BroadcastReceiver() {
@@ -197,22 +203,32 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 
 	private void startAccelerometer() {
 		mSensorManager.registerListener(mThisService, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
+		mIsAccel = true;
+		acquireWakeLock();
 	}
 
 	private void stopAccelerometer() {
 		mSensorManager.unregisterListener(mThisService, mAccelerometer);
+		mIsAccel = false;
+		checkedReleaseWakeLock();
 	}
 
 	private void startGPS() {
 		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, GPS_INTERVAL, GPS_LOCATION_INTERVAL, mThisService);
+		mIsGPS = true;
+		acquireWakeLock();
 	}
 
 	private void stopGPS() {
 		mLocationManager.removeUpdates(mThisService);
+		mIsGPS = false;
+		checkedReleaseWakeLock();
 	}
 
 	private void startBattery() {
 		this.registerReceiver(mBatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+		mIsBattery = true;
+		acquireWakeLock();
 	}
 
 	private void stopBattery() {
@@ -220,6 +236,8 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 			this.unregisterReceiver(mBatteryReceiver);
 		} catch (IllegalArgumentException e) {
 		}
+		mIsBattery = false;
+		checkedReleaseWakeLock();
 	}
 
 	@Override
@@ -238,6 +256,10 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
+		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+		mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+		mWakeLock.setReferenceCounted(false);
+		
 		super.onCreate();
 	}
 
@@ -351,5 +373,21 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 
 	@Override
 	public void onStatusChanged(String provider, int status, Bundle extras) {
+	}
+
+	private void acquireWakeLock() {
+		mWakeLock.acquire();
+	}
+
+	private void checkedReleaseWakeLock() {
+		if (!mIsAccel && !mIsGPS && !mIsBattery) {
+			releaseWakeLock();
+		}
+	}
+	
+	private void releaseWakeLock() {
+		if (mWakeLock.isHeld()) {
+			mWakeLock.release();
+		}
 	}
 }

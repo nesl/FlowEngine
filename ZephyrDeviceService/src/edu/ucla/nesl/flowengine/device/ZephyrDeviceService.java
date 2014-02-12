@@ -18,12 +18,14 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.os.PowerManager;
 import android.os.RemoteException;
 import android.util.Log;
 import edu.ucla.nesl.flowengine.SensorType;
@@ -66,6 +68,8 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	private boolean mIsStopRequest = false;
 	private OutputStream mOutputStream;
 	private InputStream mInputStream;
+
+	private PowerManager.WakeLock mWakeLock; 
 
 	private NotificationHelper mNotification;
 
@@ -152,7 +156,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	}
 
 	// source: http://rgagnon.com/javadetails/java-0596.html
-	/*static final String HEXES = "0123456789ABCDEF";
+	static final String HEXES = "0123456789ABCDEF";
 	public String getHex(byte[] raw, int num) {
 		if (raw == null) 
 			return null;
@@ -161,7 +165,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 			hex.append(HEXES.charAt((raw[i] & 0xF0) >> 4)).append(HEXES.charAt((raw[i] & 0x0F)));
 		}
 		return hex.toString();
-	}*/
+	}
 
 	private byte[] generateSetRTCMessage() {
 		byte[] msg = new byte[] { 0x02, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03 };
@@ -428,33 +432,33 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		if (mReceiveThread != null && !mIsStopRequest)
 		{
 			mIsStopRequest = true;
-			Log.i(TAG, "Stop receiving requested.");
 			mNotification.showNotificationNow("Stop receiving..");
 		}
+
+		releaseWakeLock();
 	}
 
 	private void start() {
+
+		acquireWakeLock();
+
 		if (mReceiveThread == null) {
 			mReceiveThread = new Thread(this);
 		}
-		Log.d(TAG, "Trying to connect to Zephyr..");
+
 		if (mSocket == null) {
 			mNotification.showNotificationNow("Connecting to Zephyr..");
 			while (!connect(bluetoothAddr)) {
-				mNotification.showNotificationNow("Retrying..");
-				Log.d(TAG, "Retrying..");
+				mNotification.showNotificationNow("Retrying to connect to Zephyr...");
 				try {
 					Thread.sleep(RETRY_INTERVAL);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
-			Log.d(TAG, "Start receiving thread..");
 			mNotification.showNotificationNow("Connected to Zephyr!");
 			mReceiveThread.start();
-		} else {
-			Log.d(TAG, "Already connected to Zephyr.");
-		}
+		} 
 	}
 
 	private Handler mHandler = new Handler() {
@@ -568,6 +572,11 @@ public class ZephyrDeviceService extends Service implements Runnable {
 	@Override
 	public void onCreate() {
 		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
+
+		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+		mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+		mWakeLock.setReferenceCounted(false);
+
 		super.onCreate();
 	}
 
@@ -588,7 +597,7 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		if (mAPI == null) {
 			tryBindToFlowEngineService();
 		}
-		
+
 		return super.onStartCommand(intent, flags, startId);
 	}
 
@@ -623,5 +632,15 @@ public class ZephyrDeviceService extends Service implements Runnable {
 		}
 
 		super.onDestroy();
+	}
+
+	private void acquireWakeLock() {
+		mWakeLock.acquire();
+	}
+
+	private void releaseWakeLock() {
+		if (mWakeLock.isHeld()) {
+			mWakeLock.release();
+		}
 	}
 }
