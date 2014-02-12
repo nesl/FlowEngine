@@ -13,5 +13,6 @@
     <string name="password_confirm">Confirm password: </string>
     <string name="done">Done</string>
     <string name="cancel">Cancel</string>
+    <string name="nodata">No data yet.</string>
 
 </resources>

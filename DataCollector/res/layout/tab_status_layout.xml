@@ -1,15 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-  xmlns:android="http://schemas.android.com/apk/res/android"
-  android:orientation="vertical"
-  android:layout_width="fill_parent"
-  android:layout_height="fill_parent">
-   
-  <!-- Screen Design for Photos -->
-  <TextView android:text="STATUS HERE"
-            android:padding="15dip"
-            android:textSize="18dip"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" >
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical" >
+
+        <TextView
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content"/>
-     
-</LinearLayout>
+            android:layout_height="wrap_content"
+            android:text="PhoneGPS:" />
+
+        <TextView
+            android:id="@+id/gps_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nodata" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="\nAccelerometer:" />
+
+        <TextView
+            android:id="@+id/accelerometer_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nodata" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="\nECG:" />
+
+        <TextView
+            android:id="@+id/ecg_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nodata" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="\nRespiration:" />
+
+        <TextView
+            android:id="@+id/respiration_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nodata" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="\nActivity:" />
+
+        <TextView
+            android:id="@+id/activity_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nodata" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="\nStress:" />
+
+        <TextView
+            android:id="@+id/stress_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nodata" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="\nConversation:" />
+
+        <TextView
+            android:id="@+id/conversation_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nodata" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="\nPhoneBattery:" />
+
+        <TextView
+            android:id="@+id/battery_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nodata" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="\nZephyrBattery:" />
+
+        <TextView
+            android:id="@+id/zephyr_battery_text"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/nodata" />
+    </LinearLayout>
+
+</ScrollView>

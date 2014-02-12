@@ -24,10 +24,9 @@ import android.util.Log;
 import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
-import edu.ucla.nesl.flowengine.device.phone.R;
-import edu.ucla.nesl.util.NotificationHelper;
 
 public class PhoneSensorDeviceService extends Service implements SensorEventListener, LocationListener {
+	
 	private static final String TAG = PhoneSensorDeviceService.class.getSimpleName();
 
 	private static final int RETRY_INTERVAL = 5000; // ms
@@ -35,7 +34,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	private static final String FLOW_ENGINE_SERVICE_NAME = "edu.ucla.nesl.flowengine.FlowEngine";
 
 	private static final int GPS_INTERVAL = 1000; // ms
-	private static final int GPS_LOCATION_INTERVAL = 0; // meters
+	private static final int GPS_LOCATION_INTERVAL = 1; // meters
 
 	private static final int MSG_KILL = 0;
 	private static final int MSG_START = 1;
@@ -53,7 +52,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	private int	mDeviceID;
 	private boolean mIsFlowEngineConnected = false;
 
-	private NotificationHelper mNotification;
+	//private NotificationHelper mNotification;
 
 	private BroadcastReceiver mBatteryReceiver = new BroadcastReceiver() {
 		@Override
@@ -108,7 +107,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 				mAPI.addSensor(mDeviceID, SensorType.PHONE_BATTERY, -1);
 				mIsFlowEngineConnected = true;
 			} catch (RemoteException e) {
-				Log.e(TAG, "Failed to add device..", e);
+				e.printStackTrace();
 			}
 		}
 
@@ -236,7 +235,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 
 		Log.d(TAG, "Phone sensor service creating..");
 
-		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
+		//mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
 
 		mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 		mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);

@@ -22,28 +22,33 @@ import edu.ucla.nesl.flowengine.aidl.FlowEngineAppAPI;
 public class DataService extends Service {
 
 	public static final String BROADCAST_INTENT_MESSAGE = "edu.ucla.nesl.datacollector.service.DataService";
-
-	private static final int RETRY_INTERVAL = 5000; // ms
-
-	private static final String BUNDLE_NAME = "name";
-	private static final String BUNDLE_TYPE = "type";
-	private static final String BUNDLE_DATA = "data";
-	private static final String BUNDLE_LENGTH = "length";
-	private static final String BUNDLE_TIMESTAMP = "timestamp";
-
-	private static final int MSG_PUBLISH = 1;
+	public static final String BUNDLE_NAME = "name";
+	public static final String BUNDLE_TYPE = "type";
+	public static final String BUNDLE_DATA = "data";
+	public static final String BUNDLE_LENGTH = "length";
+	public static final String BUNDLE_TIMESTAMP = "timestamp";
 
 	public static final String REQUEST_TYPE = "request_type";
+	
 	public static final String GET_SUBSCRIBED_SENSORS = "get_subscribed_sensors";
-	public static final String CHANGE_SUBSCRIPTION = "change_subscription";
+	
+	public static final String START_BROADCAST_SENSOR_DATA = "start_sensor_data";
+	public static final String STOP_BROADCAST_SENSOR_DATA = "stop_sensor_data";
+	
+	public static final String CHANGE_SUBSCRIPTION = "change_subscription";	
 	public static final String EXTRA_SENSOR_NAME = "sensor_name";
 	public static final String EXTRA_IS_ENABLED = "is_enabled";
 
 	public static final String BUNDLE_SUBSCRIBED_SENSORS = "subscribed_sensors";
-	
+
+	private static final int RETRY_INTERVAL = 5000; // ms
+	private static final int MSG_PUBLISH = 1;
+
 	private FlowEngineAppAPI mAPI;
 	private int mAppID;
 
+	private boolean isBroadcastData = false; 
+	
 	@Override
 	public void onCreate() {
 		Log.d(Const.TAG, "Trying to bind to flowengine service");
@@ -111,7 +116,11 @@ public class DataService extends Service {
 		if (bundle != null && mAPI != null) {
 			String requestType = bundle.getString(REQUEST_TYPE);
 			try {
-				if (requestType.equals(GET_SUBSCRIBED_SENSORS)) {
+				if (requestType.equals(START_BROADCAST_SENSOR_DATA)) {
+					isBroadcastData = true;
+				} else if (requestType.equals(STOP_BROADCAST_SENSOR_DATA)) {
+					isBroadcastData = false;
+				} else if (requestType.equals(GET_SUBSCRIBED_SENSORS)) {
 					String[] sensors = mAPI.getSubscribedNodeNames(mAppID);
 					Intent i = new Intent(BROADCAST_INTENT_MESSAGE);
 					i.putExtra(BUNDLE_SUBSCRIBED_SENSORS, sensors);
@@ -190,6 +199,7 @@ public class DataService extends Service {
 			Log.i(Const.TAG, "Service connection closed.");
 			mAPI = null;
 			mAppID = -1;
+			isBroadcastData = false;
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
@@ -266,12 +276,19 @@ public class DataService extends Service {
 			switch (msg.what) {
 			case MSG_PUBLISH:
 				Bundle bundle = (Bundle)msg.obj;
-				String name = bundle.getString(BUNDLE_NAME);
+				
+				if (isBroadcastData) {
+					Intent i = new Intent(BROADCAST_INTENT_MESSAGE);
+					i.putExtras(bundle);
+					sendBroadcast(i);
+				}
+				
+				/*String name = bundle.getString(BUNDLE_NAME);
 				long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
 				int length = bundle.getInt(BUNDLE_LENGTH);
 				String type = bundle.getString(BUNDLE_TYPE);
 
-				dumpReceivedData(timestamp, type, bundle, name);
+				dumpReceivedData(timestamp, type, bundle, name);*/
 
 				break;
 			}
