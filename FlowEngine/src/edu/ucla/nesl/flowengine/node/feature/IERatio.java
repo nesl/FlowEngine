@@ -1,8 +1,8 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -61,13 +61,13 @@ public class IERatio extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!type.equals("int[]")) {
+		if (!type.equals(DataType.INTEGER_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
 		int[] ieRatio = calculateIERatio((int[])inputData, length);
 		
-		output(name.replace("PeakValley", "IERatio"), "int[]", ieRatio, ieRatio.length, timestamp);
+		output(name.replace("PeakValley", "IERatio"), DataType.INTEGER_ARRAY, ieRatio, ieRatio.length, timestamp);
 	}
 	
 }

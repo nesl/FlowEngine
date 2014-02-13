@@ -1,6 +1,8 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
 import java.util.ArrayList;
+
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -111,13 +113,13 @@ public class PeakValley extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!type.equals("int[]")) {
+		if (!type.equals(DataType.INTEGER_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
 		int[] realPeakValley = calculateRealPeakValley((int[])inputData);
 		
-		output(name + "PeakValley", "int[]", realPeakValley, realPeakValley.length, timestamp);
+		output(name + "PeakValley", DataType.INTEGER_ARRAY, realPeakValley, realPeakValley.length, timestamp);
 	}
 	
 	/**

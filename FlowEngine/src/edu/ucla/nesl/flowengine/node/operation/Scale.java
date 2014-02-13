@@ -1,6 +1,6 @@
 package edu.ucla.nesl.flowengine.node.operation;
 
-import edu.ucla.nesl.flowengine.DebugHelper;
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class Scale extends DataFlowNode {
@@ -23,7 +23,7 @@ public class Scale extends DataFlowNode {
 	
 	@Override
 	protected void processInput(String name, String type, Object data, int length, long timestamp) {
-		if (!type.equals("double[]")) {
+		if (!type.equals(DataType.DOUBLE_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 		double[] oriData = (double[])data;
@@ -34,6 +34,6 @@ public class Scale extends DataFlowNode {
 		}
 		
 		//DebugHelper.dump(TAG, scaleData);
-		output(name + String.format("Scale%.1f", mScale), "double[]", scaleData, length, timestamp);
+		output(name + String.format("Scale%.1f", mScale), DataType.DOUBLE_ARRAY, scaleData, length, timestamp);
 	}
 }

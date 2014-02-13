@@ -2,6 +2,7 @@ package edu.ucla.nesl.flowengine.node.feature;
 
 import java.util.ArrayList;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -30,7 +31,7 @@ public class BreathingDuration extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!type.equals("int[]")) {
+		if (!type.equals(DataType.INTEGER_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 		if (name.contains("RIPPeakValley")) {
@@ -46,7 +47,7 @@ public class BreathingDuration extends DataFlowNode {
 		if (mRPV != null && mRIP != null) {
 			int[] bduration = getBdurationUsingRPV(mRPV);
 			DebugHelper.dump(TAG, bduration);
-			output(mName + "BreathingDuration", "int[]", bduration, bduration.length, mTimestamp);
+			output(mName + "BreathingDuration", DataType.INTEGER_ARRAY, bduration, bduration.length, mTimestamp);
 			mRPV = null;
 			mRIP = null;
 		}

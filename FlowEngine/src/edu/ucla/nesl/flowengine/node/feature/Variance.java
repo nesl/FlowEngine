@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -28,12 +29,12 @@ public class Variance extends DataFlowNode {
 	private double calculateVariance() {
 		double sum = 0.0;
 		double var;
-		if (mType.equals("int[]")) {
+		if (mType.equals(DataType.INTEGER_ARRAY)) {
 			for (int value: (int[])mData) {
 				sum += Math.pow(value - mMean, 2.0);
 			}
 			var = sum / ((int[])mData).length;
-		} else if (mType.equals("double[]")) {
+		} else if (mType.equals(DataType.DOUBLE_ARRAY)) {
 			for (double value: (double[])mData) {
 				sum += Math.pow(value - mMean, 2.0);
 			}
@@ -50,7 +51,7 @@ public class Variance extends DataFlowNode {
 	@Override
 	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (name.contains("Mean")) {
-			if (!type.equals("double")) {
+			if (!type.equals(DataType.DOUBLE)) {
 				throw new UnsupportedOperationException("Unsupported type: " + type);
 			}
 			mMean = (Double)inputData;
@@ -60,7 +61,7 @@ public class Variance extends DataFlowNode {
 				InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 				return;
 			}
-			if (!type.equals("double[]") && !type.equals("int[]")) {
+			if (!type.equals(DataType.DOUBLE_ARRAY) && !type.equals(DataType.INTEGER_ARRAY)) {
 				throw new UnsupportedOperationException("Unsupported type: " + type);
 			}
 			mData = inputData;
@@ -71,7 +72,7 @@ public class Variance extends DataFlowNode {
 		
 		if (mIsMeanNew && mData != null) {
 			double var = calculateVariance();
-			output(mName + "Variance", "double", var, 0, mTimestamp);
+			output(mName + "Variance", DataType.DOUBLE, var, 0, mTimestamp);
 			mIsMeanNew = false;
 			mData = null;
 		}

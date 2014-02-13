@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -58,13 +59,13 @@ public class FFT extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!type.equals("double[]")) {
+		if (!type.equals(DataType.DOUBLE_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
 		calculateSpectrum((double[])inputData);
 		DebugHelper.dump(TAG, mPowerSpectrum);
 		
-		output(name + String.format("FFT%.1f-%.1f-%.1f", mStartFrequency, mEndFrequency, mStepFrequency), "double[]", mPowerSpectrum, mPowerSpectrum.length, timestamp);
+		output(name + String.format("FFT%.1f-%.1f-%.1f", mStartFrequency, mEndFrequency, mStepFrequency), DataType.DOUBLE_ARRAY, mPowerSpectrum, mPowerSpectrum.length, timestamp);
 	}
 }

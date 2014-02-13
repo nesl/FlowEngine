@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import android.util.Log;
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 
 public class Buffer extends DataFlowNode {
@@ -87,13 +88,13 @@ public class Buffer extends DataFlowNode {
 			mDataType = type;
 			mTimestamp = timestamp;
 			mIndex = 0;
-			if (type.contains("int")) {
+			if (type.contains(DataType.INTEGER)) {
 				mBuffer = new int[mBufferSize];
-			} else if (type.contains("long")) {
+			} else if (type.contains(DataType.LONG)) {
 				mBuffer = new long[mBufferSize];
-			} else if (type.contains("double")) {
+			} else if (type.contains(DataType.DOUBLE)) {
 				mBuffer = new double[mBufferSize];
-			} else if (type.contains("float")) {
+			} else if (type.contains(DataType.FLOAT)) {
 				mBuffer = new float[mBufferSize];
 			}
 		} else if (!name.equals(mDataName) || !type.equals(mDataType)) {
@@ -127,13 +128,13 @@ public class Buffer extends DataFlowNode {
 		}
 		
 		if (!mDataType.contains("[]")) {
-			if (mDataType.contains("int")) {
+			if (mDataType.contains(DataType.INTEGER)) {
 				((int[])mBuffer)[mIndex] = (Integer)inputData;	
-			} else if (mDataType.contains("double")) {
+			} else if (mDataType.contains(DataType.DOUBLE)) {
 				((double[])mBuffer)[mIndex] = (Double)inputData;
-			} else if (mDataType.contains("float")) {
+			} else if (mDataType.contains(DataType.FLOAT)) {
 				((float[])mBuffer)[mIndex] = (Float)inputData;
-			} else if (mDataType.contains("long")) {
+			} else if (mDataType.contains(DataType.LONG)) {
 				((long[])mBuffer)[mIndex] = (Long)inputData;
 			}
 			mIndex += 1;

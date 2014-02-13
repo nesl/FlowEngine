@@ -1,12 +1,12 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class RootMeanSquare extends DataFlowNode {
 	private static final String TAG = RootMeanSquare.class.getSimpleName();
 	
-	private String mType = "double";
 	private double mFactor = 1.0;
 	private double mScale = 1.0;
 	
@@ -39,12 +39,12 @@ public class RootMeanSquare extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!type.equals("double[]")) {
+		if (!type.equals(DataType.DOUBLE_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
 		double rms = calculateRootMeanSquare((double[])inputData);
 		//DebugHelper.log(TAG, "RMS: " + rms);
-		output(name + "RMS", "double", rms, 0, timestamp);
+		output(name + "RMS", DataType.DOUBLE, rms, 0, timestamp);
 	}
 }

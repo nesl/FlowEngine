@@ -1,7 +1,7 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
-import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
 public class QuartileDeviation extends DataFlowNode {
@@ -31,7 +31,7 @@ public class QuartileDeviation extends DataFlowNode {
 	
 	@Override
 	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
-		if (!type.equals("double")) {
+		if (!type.equals(DataType.DOUBLE)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 		if (name.contains("Percentile75.0")) {
@@ -46,7 +46,7 @@ public class QuartileDeviation extends DataFlowNode {
 		
 		if (mIsNewPercentile25 && mIsNewPercentile75) {
 			double qd = calculateQuartileDeviation();
-			output(mName + "QuartileDeviation", "double", qd, 0, timestamp);
+			output(mName + "QuartileDeviation", DataType.DOUBLE, qd, 0, timestamp);
 			mIsNewPercentile25 = false;
 			mIsNewPercentile75 = false;
 		}

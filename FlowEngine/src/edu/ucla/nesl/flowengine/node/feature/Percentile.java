@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -40,7 +41,7 @@ public class Percentile extends DataFlowNode {
 		
 		return new ResultData(
 				name.replace("Sort", String.format("Percentile%.1f", percentile)), 
-				"double", 
+				DataType.DOUBLE, 
 				percentileResult, 
 				0, 
 				timestamp);
@@ -56,7 +57,7 @@ public class Percentile extends DataFlowNode {
 		double upper;
 		double dif;
 		
-		if (mType.equals("int[]")) {
+		if (mType.equals(DataType.INTEGER_ARRAY)) {
 			int[] sorted = (int[])mSorted;
 			if (sorted.length == 1) {
 				return sorted[0];
@@ -74,7 +75,7 @@ public class Percentile extends DataFlowNode {
 			}
 			lower = sorted[intPos - 1];
 			upper = sorted[intPos];
-		} else if (mType.equals("double[]")) {
+		} else if (mType.equals(DataType.DOUBLE_ARRAY)) {
 			double[] sorted = (double[])mSorted;
 			if (sorted.length == 1) {
 				return sorted[0];
@@ -112,7 +113,7 @@ public class Percentile extends DataFlowNode {
 		}
 		double result = getPercentile(percentile);
 		
-		ResultData resultData = new ResultData(name.replace("Sort", String.format("Percentile%.1f", percentile)), "double", result, 0, timestamp);
+		ResultData resultData = new ResultData(name.replace("Sort", String.format("Percentile%.1f", percentile)), DataType.DOUBLE, result, 0, timestamp);
 		return resultData;
 	}
 	
@@ -122,7 +123,7 @@ public class Percentile extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!name.contains("Sort") || !(type.equals("int[]") || type.equals("double[]"))) {
+		if (!name.contains("Sort") || !(type.equals(DataType.INTEGER_ARRAY) || type.equals(DataType.DOUBLE_ARRAY))) {
 			throw new UnsupportedOperationException("Unsupported name: " + name + " or type: " + type);
 		}
 		

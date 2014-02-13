@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.classifier;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -46,7 +47,7 @@ public class Activity extends DataFlowNode {
 		
 		if (activity != null) {
 			DebugHelper.log(TAG, activity);
-			output(SensorType.ACTIVITY_CONTEXT_NAME, "String", activity, 0, timestamp);
+			output(SensorType.ACTIVITY_CONTEXT_NAME, DataType.STRING, activity, 0, timestamp);
 		}
 	}
 	

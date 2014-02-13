@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -20,7 +21,7 @@ public class Median extends DataFlowNode {
 	private double calculateMedian(String type, Object inputData, int length) {
 		double result;
 
-		if (type.equals("int[]")) {
+		if (type.equals(DataType.INTEGER_ARRAY)) {
 			int[] data = (int[])inputData;
 			if (length % 2 == 1)
 				result = data[(length+1)/2-1];
@@ -30,7 +31,7 @@ public class Median extends DataFlowNode {
 				double upper = data[length/2];
 				result = (lower + upper) / 2.0;
 			}
-		} else if (type.equals("double[]")) {
+		} else if (type.equals(DataType.DOUBLE_ARRAY)) {
 			double[] data = (double[])inputData;
 			if (length % 2 == 1)
 				result = data[(length+1)/2-1];
@@ -61,6 +62,6 @@ public class Median extends DataFlowNode {
 
 		double result = calculateMedian(type, inputData, length);
 		
-		output(name.replace("Sort", "Median"), "double", result, 0, timestamp);
+		output(name.replace("Sort", "Median"), DataType.DOUBLE, result, 0, timestamp);
 	}
 }

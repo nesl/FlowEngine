@@ -2,6 +2,7 @@ package edu.ucla.nesl.flowengine.node.feature;
 
 import java.util.Arrays;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -45,13 +46,13 @@ public class RRInterval extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!type.equals("int[]")) {
+		if (!type.equals(DataType.INTEGER_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
 		int[] rrInterval = calculateRRInterval((int[])inputData);
 
-		output(name + "RRInterval", "int[]", rrInterval, rrInterval.length, timestamp);
+		output(name + "RRInterval", DataType.INTEGER_ARRAY, rrInterval, rrInterval.length, timestamp);
 	}
 	
 	private int[] findpks(int[] tlpbody02) {

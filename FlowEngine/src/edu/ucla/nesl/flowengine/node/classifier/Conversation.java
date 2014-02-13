@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.classifier;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.SensorType;
@@ -61,7 +62,7 @@ public class Conversation extends DataFlowNode {
 
 	@Override
 	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
-		if (!type.equals("double")) {
+		if (!type.equals(DataType.DOUBLE)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 		
@@ -107,7 +108,7 @@ public class Conversation extends DataFlowNode {
 			mFeatures[4] = mFeatures[4] / mRoundingMultiplier;
 			int conversation = getConversationClassification(mFeatures[0], mFeatures[1], mFeatures[2], mFeatures[3], mFeatures[4], mFeatures[5], mFeatures[6], mFeatures[7]);
 			DebugHelper.log(TAG, "conversation: " + conversation);
-			output(SensorType.CONVERSATION_CONTEXT_NAME, "String", getClassString(conversation), 0, timestamp);
+			output(SensorType.CONVERSATION_CONTEXT_NAME, DataType.STRING, getClassString(conversation), 0, timestamp);
 			clearFeatureBitVector();
 			
 			synchronized (DebugHelper.lock){

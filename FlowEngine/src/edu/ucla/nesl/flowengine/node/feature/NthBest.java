@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
@@ -22,7 +23,7 @@ public class NthBest extends DataFlowNode {
 			InvalidDataReporter.report("Invalid mType(" + mType + ") or mSorted(" + mSorted + ")");
 			return 0;
 		}
-		if (!mType.equals("int[]")) {
+		if (!mType.equals(DataType.INTEGER_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported mType: " + mType);
 		}
 
@@ -55,7 +56,7 @@ public class NthBest extends DataFlowNode {
 		
 		ResultData resultData = new ResultData(
 				name.replace("Sort", String.format("NthBest%d", nth)), 
-				"double", 
+				DataType.DOUBLE, 
 				result, 
 				0, 
 				timestamp);
@@ -68,7 +69,7 @@ public class NthBest extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!name.contains("Sort") || !(type.equals("int[]"))) {
+		if (!name.contains("Sort") || !(type.equals(DataType.INTEGER_ARRAY))) {
 			throw new UnsupportedOperationException("Unsupported name: " + name + " or type: " + type);
 		}
 		

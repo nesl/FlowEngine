@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -61,12 +62,12 @@ public class Ventilation extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!type.equals("int[]")) {
+		if (!type.equals(DataType.INTEGER_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
 		double ventilation = calculateVentilation((int[])inputData, length);
 		
-		output(name.replace("PeakValley", "Ventilation"), "double", ventilation, 0, timestamp);
+		output(name.replace("PeakValley", "Ventilation"), DataType.DOUBLE, ventilation, 0, timestamp);
 	}
 }

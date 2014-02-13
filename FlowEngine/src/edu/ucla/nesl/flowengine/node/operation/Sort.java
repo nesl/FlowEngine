@@ -2,6 +2,7 @@ package edu.ucla.nesl.flowengine.node.operation;
 
 import java.util.Arrays;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 
@@ -23,9 +24,9 @@ public class Sort extends DataFlowNode {
 	}
 
 	private void sort() {
-		if (mType.equals("int[]")) {
+		if (mType.equals(DataType.INTEGER_ARRAY)) {
 			Arrays.sort((int[])mSorted);
-		} else if (mType.equals("double[]")) {
+		} else if (mType.equals(DataType.DOUBLE_ARRAY)) {
 			Arrays.sort((double[])mSorted);
 		} else {
 			throw new UnsupportedOperationException("Unsupported type: " + mType);
@@ -45,9 +46,9 @@ public class Sort extends DataFlowNode {
 			return;
 		}
 
-		if (type.equals("int[]")) {
+		if (type.equals(DataType.INTEGER_ARRAY)) {
 			mSorted = new int[length];
-		} else if (type.equals("double[]")) {
+		} else if (type.equals(DataType.DOUBLE_ARRAY)) {
 			mSorted = new double[length];
 		} else {
 			throw new UnsupportedOperationException("Unsupported type: " + type);

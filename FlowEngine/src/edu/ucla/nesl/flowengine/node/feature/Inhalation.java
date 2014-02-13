@@ -2,6 +2,7 @@ package edu.ucla.nesl.flowengine.node.feature;
 
 import java.util.ArrayList;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -63,13 +64,13 @@ public class Inhalation extends DataFlowNode {
 			InvalidDataReporter.report("in " + TAG + ": name: " + name + ", type: " + type + ", length: " + length);
 			return;
 		}
-		if (!type.equals("int[]")) {
+		if (!type.equals(DataType.INTEGER_ARRAY)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 
 		int[] inhalation = calculateInhalation((int[])inputData, length);
 
-		output(name.replace("PeakValley", "Inhalation"), "int[]", inhalation, inhalation.length, timestamp);
+		output(name.replace("PeakValley", "Inhalation"), DataType.INTEGER_ARRAY, inhalation, inhalation.length, timestamp);
 	}
 
 }

@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.feature;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -50,6 +51,6 @@ public class BandPower extends DataFlowNode {
 
 		double result = getBandPower((double[][])inputData);
 		
-		output(String.format(name + "BandPower%.1f-%.1f", mRangeLower, mRangeUpper), "double", result, 0, timestamp);
+		output(String.format(name + "BandPower%.1f-%.1f", mRangeLower, mRangeUpper), DataType.DOUBLE, result, 0, timestamp);
 	}
 }

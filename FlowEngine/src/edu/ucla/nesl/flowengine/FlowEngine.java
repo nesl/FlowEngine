@@ -249,15 +249,15 @@ public class FlowEngine extends Service {
 		// show notification
 		showNotification(sensor, name);
 
-		if (type.equals("double[]")) {
+		if (type.equals(DataType.DOUBLE_ARRAY)) {
 			seed.input(name, type, bundle.getDoubleArray(BUNDLE_DATA), length, timestamp);
-		} else if (type.equals("double")) {
+		} else if (type.equals(DataType.DOUBLE)) {
 			seed.input(name, type, bundle.getDouble(BUNDLE_DATA), length, timestamp);
-		} else if (type.equals("int[]")) {
+		} else if (type.equals(DataType.INTEGER_ARRAY)) {
 			seed.input(name, type, bundle.getIntArray(BUNDLE_DATA), length, timestamp);
-		} else if (type.equals("int")) {
+		} else if (type.equals(DataType.INTEGER)) {
 			seed.input(name, type, bundle.getInt(BUNDLE_DATA), length, timestamp);
-		} else if (type.equals("String")) {
+		} else if (type.equals(DataType.STRING)) {
 			seed.input(name, type, bundle.getString(BUNDLE_DATA), length, timestamp);
 		} else {
 			throw new IllegalArgumentException("Unknown data_type: " + type);
@@ -373,7 +373,7 @@ public class FlowEngine extends Service {
 			Bundle bundle = new Bundle();
 			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
 			bundle.putInt(BUNDLE_SENSOR, sensor);
-			bundle.putString(BUNDLE_TYPE, "double[]");
+			bundle.putString(BUNDLE_TYPE, DataType.DOUBLE_ARRAY);
 			bundle.putDoubleArray(BUNDLE_DATA, data);
 			bundle.putInt(BUNDLE_LENGTH, length);
 			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
@@ -385,7 +385,7 @@ public class FlowEngine extends Service {
 			Bundle bundle = new Bundle();
 			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
 			bundle.putInt(BUNDLE_SENSOR, sensor);
-			bundle.putString(BUNDLE_TYPE, "double");
+			bundle.putString(BUNDLE_TYPE, DataType.DOUBLE);
 			bundle.putDouble(BUNDLE_DATA, data);
 			bundle.putInt(BUNDLE_LENGTH, 1);
 			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
@@ -397,7 +397,7 @@ public class FlowEngine extends Service {
 			Bundle bundle = new Bundle();
 			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
 			bundle.putInt(BUNDLE_SENSOR, sensor);
-			bundle.putString(BUNDLE_TYPE, "int[]");
+			bundle.putString(BUNDLE_TYPE, DataType.INTEGER_ARRAY);
 			bundle.putIntArray(BUNDLE_DATA, data);
 			bundle.putInt(BUNDLE_LENGTH, length);
 			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
@@ -409,7 +409,7 @@ public class FlowEngine extends Service {
 			Bundle bundle = new Bundle();
 			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
 			bundle.putInt(BUNDLE_SENSOR, sensor);
-			bundle.putString(BUNDLE_TYPE, "int");
+			bundle.putString(BUNDLE_TYPE, DataType.INTEGER);
 			bundle.putInt(BUNDLE_DATA, data);
 			bundle.putInt(BUNDLE_LENGTH, 1);
 			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);
@@ -421,7 +421,7 @@ public class FlowEngine extends Service {
 			Bundle bundle = new Bundle();
 			bundle.putInt(BUNDLE_DEVICE_ID, deviceID);
 			bundle.putInt(BUNDLE_SENSOR, sensor);
-			bundle.putString(BUNDLE_TYPE, "String");
+			bundle.putString(BUNDLE_TYPE, DataType.STRING);
 			bundle.putString(BUNDLE_DATA, data);
 			bundle.putInt(BUNDLE_LENGTH, length);
 			bundle.putLong(BUNDLE_TIMESTAMP, timestamp);

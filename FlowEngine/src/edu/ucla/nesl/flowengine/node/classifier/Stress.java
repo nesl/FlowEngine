@@ -1,5 +1,6 @@
 package edu.ucla.nesl.flowengine.node.classifier;
 
+import edu.ucla.nesl.flowengine.DataType;
 import edu.ucla.nesl.flowengine.DebugHelper;
 import edu.ucla.nesl.flowengine.InvalidDataReporter;
 import edu.ucla.nesl.flowengine.SensorType;
@@ -108,7 +109,7 @@ public class Stress extends DataFlowNode {
 	
 	@Override
 	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
-		if (!type.equals("double")) {
+		if (!type.equals(DataType.DOUBLE)) {
 			throw new UnsupportedOperationException("Unsupported type: " + type);
 		}
 		
@@ -170,7 +171,7 @@ public class Stress extends DataFlowNode {
 		if (isAllFeature()) {
 			boolean isStress = getStressPredictionSVM(mFeatures);
 			DebugHelper.log(TAG, "isStress: " + isStress);
-			output(SensorType.STRESS_CONTEXT_NAME, "String", getClassString(isStress), 0, timestamp);
+			output(SensorType.STRESS_CONTEXT_NAME, DataType.STRING, getClassString(isStress), 0, timestamp);
 			clearFeatureBitVector();
 			
 			synchronized (DebugHelper.lock){
