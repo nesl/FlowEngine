@@ -2,6 +2,8 @@ package edu.ucla.nesl.datacollector.activity;
 
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -10,38 +12,35 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import edu.ucla.nesl.datacollector.Const;
 import edu.ucla.nesl.datacollector.R;
 import edu.ucla.nesl.datacollector.service.DataService;
-import edu.ucla.nesl.flowengine.SensorType;
+import edu.ucla.nesl.flowengine.DataType;
 
 public class TabStatusActivity extends Activity {
 
-	private TextView mGPSText;
-	private TextView mAccText;
-	private TextView mECGText;
-	private TextView mRIPText;
-	private TextView mActivityText;
-	private TextView mStressText;
-	private TextView mConversationText;
-	private TextView mBatteryText;
-	private TextView mZephyrBatteryText;
-
+	private Map<String, TextView> textMap;
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.tab_status_layout);
 
-		mAccText = (TextView)findViewById(R.id.accelerometer_text);
-		mECGText = (TextView)findViewById(R.id.ecg_text);
-		mRIPText = (TextView)findViewById(R.id.respiration_text);
-		mStressText = (TextView)findViewById(R.id.stress_text);
-		mConversationText = (TextView)findViewById(R.id.conversation_text);
-		mActivityText = (TextView)findViewById(R.id.activity_text);
-		mBatteryText = (TextView)findViewById(R.id.battery_text);
-		mZephyrBatteryText = (TextView)findViewById(R.id.zephyr_battery_text);
-		mGPSText = (TextView)findViewById(R.id.gps_text);
+		textMap = new HashMap<String, TextView>();
+		
+		LinearLayout statusLayout = (LinearLayout)findViewById(R.id.status_layout);
+		
+		for (String sensor : TabSensorsActivity.sensorNames) {
+			TextView sensorText = new TextView(this);
+			sensorText.setText("\n" + sensor + ":");
+			TextView textView = new TextView(this);
+			textView.setText("No data yet.");
+			textMap.put(sensor, textView);
+			statusLayout.addView(sensorText);
+			statusLayout.addView(textView);
+		}
 	}
 
 	@Override
@@ -75,6 +74,15 @@ public class TabStatusActivity extends Activity {
 		return str;
 	}
 
+	private String getArrayAsString(int[] data) {
+		String str = "{ ";
+		for (int v : data) {
+			str += v + ", ";
+		}
+		str = str.substring(0, str.length() - 2) + " }";
+		return str;
+	}
+
 	private BroadcastReceiver receiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
@@ -90,30 +98,25 @@ public class TabStatusActivity extends Activity {
 				String localTime = DateFormat.getTimeInstance().format(date);
 				String lastUpdateString = "\nLast Updated: " + localDate + ' ' + localTime;
 
-				if (name.equals(SensorType.PHONE_GPS_NAME)) {
-					String str = getArrayAsString(bundle.getDoubleArray(DataService.BUNDLE_DATA));
-					mGPSText.setText(str + lastUpdateString);
-				} else if (name.equals(SensorType.PHONE_ACCELEROMETER_NAME)) {
-					String str = getArrayAsString(bundle.getDoubleArray(DataService.BUNDLE_DATA));
-					mAccText.setText(str + lastUpdateString);
-				} else if (name.equals(SensorType.ECG_NAME)) {
-					String str = bundle.getIntArray(DataService.BUNDLE_DATA).length + " samples";
-					mECGText.setText(str + lastUpdateString);
-				} else if (name.equals(SensorType.RIP_NAME)) {
-					String str = bundle.getIntArray(DataService.BUNDLE_DATA).length + " samples";
-					mRIPText.setText(str + lastUpdateString);
-				} else if (name.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
-					mActivityText.setText(bundle.getString(DataService.BUNDLE_DATA) + lastUpdateString);
-				} else if (name.equals(SensorType.STRESS_CONTEXT_NAME)) {
-					mStressText.setText(bundle.getString(DataService.BUNDLE_DATA) + lastUpdateString);
-				} else if (name.equals(SensorType.CONVERSATION_CONTEXT_NAME)) {
-					mConversationText.setText(bundle.getString(DataService.BUNDLE_DATA) + lastUpdateString);
-				} else if (name.equals(SensorType.PHONE_BATTERY_NAME)) {
-					mBatteryText.setText(bundle.getString(DataService.BUNDLE_DATA) + lastUpdateString);				
-				} else if (name.equals(SensorType.ZEPHYR_BATTERY_NAME)) {
-					mZephyrBatteryText.setText(bundle.getInt(DataService.BUNDLE_DATA) + lastUpdateString);
+				TextView textView = textMap.get(name);
+				if (textView != null) {
+					if (type.equals(DataType.STRING)) {
+						textView.setText(bundle.getString(DataService.BUNDLE_DATA) + lastUpdateString);
+					} else if (type.equals(DataType.INTEGER)) {
+						textView.setText(bundle.getInt(DataService.BUNDLE_DATA) + lastUpdateString);
+					} else if (type.equals(DataType.DOUBLE)) {
+						textView.setText(bundle.getDouble(DataService.BUNDLE_DATA) + lastUpdateString);
+					} else if (type.equals(DataType.INTEGER_ARRAY)) {
+						String str = getArrayAsString(bundle.getIntArray(DataService.BUNDLE_DATA));
+						textView.setText(str + lastUpdateString);
+					} else if (type.equals(DataType.DOUBLE_ARRAY)) {
+						String str = getArrayAsString(bundle.getDoubleArray(DataService.BUNDLE_DATA));
+						textView.setText(str + lastUpdateString);
+					} else {
+						Log.d(Const.TAG, "Unknown type: " + type);
+					}
 				} else {
-					Log.d(Const.TAG, "Unknown type: " + type);
+					Log.d(Const.TAG, "Unknown name: " + name);
 				}
 			}
 		}

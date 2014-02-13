@@ -9,6 +9,7 @@ public class Buffer extends DataFlowNode {
 	private static final String TAG = Buffer.class.getSimpleName();
 	
 	private static final int BUFFER_SYNC_THRESHOLD = 100; // ms
+	private static final int TIMESTAMP_MISMATCH_THRESHOLD = 1000; // ms
 	
 	private Object mBuffer;
 	private int mBufferSize;
@@ -103,7 +104,7 @@ public class Buffer extends DataFlowNode {
 		} else if (mSampleInterval > 0){
 			// check if this is contiguous timestamp
 			long expectedTime = mTimestamp + mIndex * mSampleInterval;
-			if (expectedTime != timestamp) {
+			if (Math.abs(expectedTime - timestamp) > TIMESTAMP_MISMATCH_THRESHOLD) {
 				DebugHelper.log(TAG, "Timestamp mismatch. Expected: " + expectedTime + ", received: " + timestamp + ", mIndex: " + mIndex + ", mTimestamp: " + timestamp);
 				// flush buffer
 				mIndex = 0;

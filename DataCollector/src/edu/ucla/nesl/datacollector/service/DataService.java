@@ -16,6 +16,7 @@ import android.os.RemoteException;
 import android.util.Log;
 import edu.ucla.nesl.datacollector.Const;
 import edu.ucla.nesl.datacollector.Device;
+import edu.ucla.nesl.datacollector.activity.TabSensorsActivity;
 import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.aidl.ApplicationInterface;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAppAPI;
@@ -30,12 +31,12 @@ public class DataService extends Service {
 	public static final String BUNDLE_TIMESTAMP = "timestamp";
 
 	public static final String REQUEST_TYPE = "request_type";
-	
+
 	public static final String GET_SUBSCRIBED_SENSORS = "get_subscribed_sensors";
-	
+
 	public static final String START_BROADCAST_SENSOR_DATA = "start_sensor_data";
 	public static final String STOP_BROADCAST_SENSOR_DATA = "stop_sensor_data";
-	
+
 	public static final String CHANGE_SUBSCRIPTION = "change_subscription";	
 	public static final String EXTRA_SENSOR_NAME = "sensor_name";
 	public static final String EXTRA_IS_ENABLED = "is_enabled";
@@ -49,7 +50,7 @@ public class DataService extends Service {
 	private int mAppID;
 
 	private boolean isBroadcastData = false; 
-	
+
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -84,8 +85,8 @@ public class DataService extends Service {
 
 	private void processStoredSubscriptionStatus() {
 		SharedPreferences settings = getSharedPreferences(Const.PREFS_NAME, 0);
-		
-		for (String sensorName : Device.sensorNames) {
+
+		for (String sensorName : TabSensorsActivity.sensorNames) {
 			boolean isEnabled = settings.getBoolean(sensorName, false);	
 			Log.d(Const.TAG, sensorName + ": " + isEnabled);
 			Intent intent = new Intent(getApplicationContext(), DataService.class);
@@ -118,12 +119,12 @@ public class DataService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Bundle bundle = intent.getExtras();
-		
+
 		if (bundle == null && mAPI == null) {
 			Log.d(Const.TAG, "Trying to bind to flowengine service");
 			tryBindToFlowEngineService();
 		}
-		
+
 		if (bundle != null && mAPI != null) {
 			String requestType = bundle.getString(REQUEST_TYPE);
 			try {
@@ -140,48 +141,10 @@ public class DataService extends Service {
 					String sensor = bundle.getString(EXTRA_SENSOR_NAME);
 					boolean isEnabled = bundle.getBoolean(EXTRA_IS_ENABLED);
 					if (sensor != null) {
-						if (sensor.equals(Device.LOCATION)) {
-							if (isEnabled) {
-								mAPI.subscribe(mAppID, SensorType.PHONE_GPS_NAME);
-							} else {
-								mAPI.unsubscribe(mAppID, SensorType.PHONE_GPS_NAME);
-							}
-						} else if (sensor.equals(Device.ACTIVITY)) {
-							if (isEnabled) {
-								mAPI.subscribe(mAppID, SensorType.ACTIVITY_CONTEXT_NAME);
-							} else {
-								mAPI.unsubscribe(mAppID, SensorType.ACTIVITY_CONTEXT_NAME);
-							}
-						} else if (sensor.equals(Device.STRESS)){
-							if (isEnabled) {
-								mAPI.subscribe(mAppID, SensorType.STRESS_CONTEXT_NAME);		
-							} else {
-								mAPI.unsubscribe(mAppID, SensorType.STRESS_CONTEXT_NAME);
-							}
-						} else if (sensor.equals(Device.CONVERSATION)) {
-							if (isEnabled) {
-								mAPI.subscribe(mAppID, SensorType.CONVERSATION_CONTEXT_NAME);
-							} else {
-								mAPI.unsubscribe(mAppID, SensorType.CONVERSATION_CONTEXT_NAME);
-							}
-						} else if (sensor.equals(Device.ACCELEROMETER)) {
-							if (isEnabled) {
-								mAPI.subscribe(mAppID, SensorType.PHONE_ACCELEROMETER_NAME);
-							} else {
-								mAPI.unsubscribe(mAppID, SensorType.PHONE_ACCELEROMETER_NAME);
-							}
-						} else if (sensor.equals(Device.ECG)) {
-							if (isEnabled) {
-								mAPI.subscribe(mAppID, SensorType.ECG_NAME);
-							} else {
-								mAPI.unsubscribe(mAppID, SensorType.ECG_NAME);
-							}
-						} else if (sensor.equals(Device.RESPIRATION)) {
-							if (isEnabled) {
-								mAPI.subscribe(mAppID, SensorType.RIP_NAME);
-							} else {
-								mAPI.unsubscribe(mAppID, SensorType.RIP_NAME);
-							}
+						if (isEnabled) {
+							mAPI.subscribe(mAppID, sensor);
+						} else {
+							mAPI.unsubscribe(mAppID, sensor);
 						}
 					}
 				}
@@ -288,13 +251,13 @@ public class DataService extends Service {
 			switch (msg.what) {
 			case MSG_PUBLISH:
 				Bundle bundle = (Bundle)msg.obj;
-				
+
 				if (isBroadcastData) {
 					Intent i = new Intent(BROADCAST_INTENT_MESSAGE);
 					i.putExtras(bundle);
 					sendBroadcast(i);
 				}
-				
+
 				/*String name = bundle.getString(BUNDLE_NAME);
 				long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
 				int length = bundle.getInt(BUNDLE_LENGTH);

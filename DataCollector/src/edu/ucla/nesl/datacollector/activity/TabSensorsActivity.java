@@ -10,7 +10,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -28,6 +27,19 @@ import edu.ucla.nesl.flowengine.SensorType;
 
 public class TabSensorsActivity extends Activity {
 
+	public static final String[] sensorNames = {
+		SensorType.PHONE_GPS_NAME,
+		SensorType.PHONE_ACCELEROMETER_NAME,
+		SensorType.ECG_NAME,
+		SensorType.RIP_NAME,
+		SensorType.ACTIVITY_CONTEXT_NAME,
+		SensorType.STRESS_CONTEXT_NAME,
+		SensorType.CONVERSATION_CONTEXT_NAME,
+		SensorType.PHONE_BATTERY_NAME,
+		SensorType.ZEPHYR_BATTERY_NAME,
+		SensorType.ZEPHYR_BUTTON_WORN_NAME
+	};
+	
 	private Context context = this;
 	
 	private SensorItemsAdapter sensorItemsAdapter;
@@ -49,14 +61,16 @@ public class TabSensorsActivity extends Activity {
 	protected void onResume() {
 		registerReceiver(receiver, new IntentFilter(DataService.BROADCAST_INTENT_MESSAGE));
 		
-		sensors = new ArrayList<Device>();
-		sensors.add(new Device(Device.LOCATION, false));
-		sensors.add(new Device(Device.ACCELEROMETER, false));
-		sensors.add(new Device(Device.ECG, false));
-		sensors.add(new Device(Device.RESPIRATION, false));
-		sensors.add(new Device(Device.ACTIVITY, false));
-		sensors.add(new Device(Device.STRESS, false));
-		sensors.add(new Device(Device.CONVERSATION, false));
+		if (sensors == null) {
+			sensors = new ArrayList<Device>();
+		} else {
+			sensors.clear();
+		}
+		
+		for (String sensorName: sensorNames) {
+			sensors.add(new Device(sensorName, false));
+		}
+		
 		sensorItemsAdapter.notifyDataSetChanged();
 		
 		Intent intent = new Intent(this, DataService.class);
@@ -84,7 +98,7 @@ public class TabSensorsActivity extends Activity {
 				for (String sensor : subscribedSensors) {
 					for (Device device : sensors) {
 						String deviceName = device.getDeviceName();
-						if (isDeviceNameSensorMatch(sensor, deviceName)) {
+						if (sensor.equals(deviceName)) {
 							device.setEnabled(true);	
 						}
 					}
@@ -93,25 +107,6 @@ public class TabSensorsActivity extends Activity {
 			}
 		}
 	};
-
-	private boolean isDeviceNameSensorMatch(String sensor, String device) {
-		if (sensor.equals(SensorType.PHONE_GPS_NAME) && device.equals(Device.LOCATION)) {
-			return true;
-		} else if (sensor.equals(SensorType.PHONE_ACCELEROMETER_NAME) && device.equals(Device.ACCELEROMETER)) {
-			return true;
-		} else if (sensor.equals(SensorType.ECG_NAME) && device.equals(Device.ECG)) {
-			return true;
-		} else if (sensor.equals(SensorType.RIP_NAME) && device.equals(Device.RESPIRATION)) {
-			return true;
-		} else if (sensor.equals(SensorType.ACTIVITY_CONTEXT_NAME) && device.equals(Device.ACTIVITY)) {
-			return true;
-		} else if (sensor.equals(SensorType.STRESS_CONTEXT_NAME) && device.equals(Device.STRESS)) {
-			return true;
-		} else if (sensor.equals(SensorType.CONVERSATION_CONTEXT_NAME) && device.equals(Device.CONVERSATION)) {
-			return true;
-		}
-		return false;
-	}
 
 	private static class SensorItemViewHolder {
 		public TextView sensorName;

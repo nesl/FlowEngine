@@ -18,7 +18,7 @@ public class DebugHelper {
 	public static int conversationCount = 0;
 	public static int numCount = 5;
 	
-	private static boolean mIsLogging = false;
+	private static boolean mIsLogging = true;
 	
 	private static Random rand = new Random(System.currentTimeMillis());
 	
