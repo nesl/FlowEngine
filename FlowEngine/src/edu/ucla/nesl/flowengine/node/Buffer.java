@@ -1,6 +1,7 @@
 package edu.ucla.nesl.flowengine.node;
 
-import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import android.util.Log;
 import edu.ucla.nesl.flowengine.DebugHelper;
@@ -19,7 +20,7 @@ public class Buffer extends DataFlowNode {
 	private long mTimestamp = -1;
 	private int mSampleInterval;
 	
-	private ArrayList<Buffer> syncBuffers = new ArrayList<Buffer>();
+	private Set<Buffer> syncBuffers = new HashSet<Buffer>();
 	
 	@Override
 	protected String processParentNodeName(String parentNodeName) {

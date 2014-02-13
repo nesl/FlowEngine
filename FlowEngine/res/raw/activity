@@ -14,7 +14,7 @@ Variance rmsVariance
 Motion motion
 Activity activity
 Outdoor outdoor
-ActivityGraphControl agc
+ActivityGraphControl agc(gps,motion)
 END
 
 BEGIN CONNECT

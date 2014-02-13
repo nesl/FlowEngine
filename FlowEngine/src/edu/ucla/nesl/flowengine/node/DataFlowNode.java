@@ -632,4 +632,8 @@ public abstract class DataFlowNode {
 	public List<DataFlowNode> getParentList() {
 		return mParentList;
 	}
+	
+	public List<DataFlowNode> getDefaultChildrenList() {
+		return mOutPortMap.get(DEFAULT_PORT_NAME);
+	}
 }

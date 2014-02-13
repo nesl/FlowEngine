@@ -1,11 +1,5 @@
 package edu.ucla.nesl.datacollector.activity;
 
-import edu.ucla.nesl.datacollector.Const;
-import edu.ucla.nesl.datacollector.R;
-import edu.ucla.nesl.datacollector.R.drawable;
-import edu.ucla.nesl.datacollector.R.id;
-import edu.ucla.nesl.datacollector.R.layout;
-import edu.ucla.nesl.datacollector.R.menu;
 import android.app.TabActivity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -13,6 +7,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TabHost;
 import android.widget.TabHost.TabSpec;
+import edu.ucla.nesl.datacollector.Const;
+import edu.ucla.nesl.datacollector.R;
 
 public class MainTabActivity extends TabActivity {
 

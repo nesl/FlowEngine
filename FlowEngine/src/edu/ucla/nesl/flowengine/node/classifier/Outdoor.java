@@ -9,14 +9,18 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class Outdoor extends DataFlowNode {
 	private static final String TAG = Outdoor.class.getSimpleName();
 
-	//private static final int WINDOW = 90; // seconds
-	private static final int WINDOW = 5; // seconds
+	// If Activity classifier outputs "still" for this duration, then it's INDOOR.
+	private static final int INDOOR_STILL_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+	//private static final int INDOOR_STILL_THRESHOLD = 5 * 1000;
+
+	// If Motion classifier outputs THRESHOLD times within WINDOW, then OUTDOOR. 
+	private static final int WINDOW = 90;
+	//private static final int WINDOW = 5; 
 	private static final int THRESHOLD = WINDOW / 2;
+	
 	private static final int NO_RESULT = 0;
 	private static final int OUTDOOR = 1;
 	private static final int INDOOR = 2;
-	//private static final int INDOOR_STILL_THRESHOLD = 5 * 60 * 1000; // 5 minutes
-	private static final int INDOOR_STILL_THRESHOLD = 5 * 1000;
 	
 	private LinkedList<Boolean> mMotionHistory = new LinkedList<Boolean>();
 	private int mMotionScore = 0;

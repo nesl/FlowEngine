@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import android.util.Log;
 import edu.ucla.nesl.flowengine.node.ActivityGraphControl;
 import edu.ucla.nesl.flowengine.node.Buffer;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
@@ -50,7 +51,7 @@ public class GraphConfiguration {
 			configureGraph(nodeName);
 			node = mNodeNameMap.get("|" + nodeName);
 			if (node == null) {
-				throw new UnsupportedOperationException("node is null.");
+				Log.w(TAG, nodeName + "is not configured.");
 			}
 		}
 		DebugHelper.log(TAG, "node = " + node);
@@ -189,7 +190,36 @@ public class GraphConfiguration {
 						parTypes[i+1] = Double.TYPE;
 						arglist[i+1] = Double.parseDouble(args[i]);
 					} else {
-						throw new IllegalArgumentException("Wrong parater: " + args[i]);
+						// Handle constructor with instance names
+						String param = args[i];
+						DataFlowNode node = instanceNameMap.get(param);
+						
+						if (node == null) {
+							throw new IllegalArgumentException("Wrong parameter: " + args[i]);
+						}
+						
+						if (node instanceof SeedNode) {
+							int sensorId = ((SeedNode) node).getSensorID();
+							SeedNode seedNode = mSeedNodeMap.get(sensorId);
+							if (seedNode == null) {
+								seedNode = (SeedNode)instanceNameMap.get(param);
+								Log.e(TAG, "seedNode still null..");
+								throw new IllegalArgumentException("seedNode still null..");
+							}
+							parTypes[i+1] = seedNode.getClass();
+							arglist[i+1] = seedNode;
+							Log.d(TAG, "name: " + seedNode.getName() + ", class: " + seedNode.getClass());
+						} else {
+							parTypes[i+1] = node.getClass();
+							arglist[i+1] = node;
+							Log.d(TAG, "name: " + node.getName() + ", class: " + node.getClass());
+						}
+						
+						/*for (Map.Entry<String, DataFlowNode> entry : instanceNameMap.entrySet()) {
+							String name = entry.getKey();
+							Class classObj = entry.getValue().getClass();
+							Log.d(TAG, "name: " + name + ", class: " + classObj.getName());
+						}*/
 					}
 				}
 				Constructor ct;
@@ -399,13 +429,13 @@ public class GraphConfiguration {
 		}
 
 		// handle ActivityGraphControl node
-		ActivityGraphControl agc = (ActivityGraphControl)nodeNameMap.get("|ActivityGraphControl");
+		/*ActivityGraphControl agc = (ActivityGraphControl)nodeNameMap.get("|ActivityGraphControl");
 		if (agc != null) {
 			agc = (ActivityGraphControl)mNodeNameMap.get("|ActivityGraphControl");
 			agc.setGpsNode(mSeedNodeMap.get(SensorType.PHONE_GPS));
 			agc.setMotionNode((Motion)mNodeNameMap.get("|Motion"));
 			DebugHelper.log(TAG, "AGC Set!");
-		}
+		}*/
 
 		// sync buffers
 		ArrayList<DataFlowNode> bufferNodes = new ArrayList<DataFlowNode>();

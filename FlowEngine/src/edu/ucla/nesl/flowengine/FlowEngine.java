@@ -1,6 +1,7 @@
 package edu.ucla.nesl.flowengine;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
@@ -19,6 +20,7 @@ import edu.ucla.nesl.flowengine.aidl.ApplicationInterface;
 import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAppAPI;
+import edu.ucla.nesl.flowengine.node.ActivityGraphControl;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 import edu.ucla.nesl.flowengine.node.SeedNode;
 import edu.ucla.nesl.util.NotificationHelper;
@@ -28,6 +30,8 @@ public class FlowEngine extends Service {
 	private static final String TAG = FlowEngine.class.getSimpleName();
 	private static FlowEngine INSTANCE;
 
+	private static final String BUNDLE_FLOWENGINE_TEST = "flowengine_test";
+	
 	private static final String BUNDLE_TYPE = "type";
 	private static final String BUNDLE_SENSOR = "sensor";
 	private static final String BUNDLE_DATA = "data";
@@ -143,25 +147,32 @@ public class FlowEngine extends Service {
 				mNotification.showNotificationNow("Removed device ID " + deviceID);
 			}
 		}
+	}
+
+	private void printSeedNodeMap() {
 		// print seed map
-		DebugHelper.log(TAG, "Printing mSeedNodeMap..");
+		Log.d(TAG, "Printing mSeedNodeMap..");
 		for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
 			int sensor = entry.getKey();
 			SeedNode node1 = entry.getValue();
-			DebugHelper.log(TAG, node1.getClass().getName() + ": " + sensor + " device: " + node1.getAttachedDevice());
+			Log.d(TAG, node1.getClass().getName() + ": " + sensor + " device: " + node1.getAttachedDevice());
 		}
-		DebugHelper.log(TAG, "Done.");
+		Log.d(TAG, "Done.");
+	}
 
+	private void printNodeNameMap() {
 		// print node name map
-		DebugHelper.log(TAG, "Printing mNodeNameMap..");
+		Log.d(TAG, "Printing mNodeNameMap..");
 		for (Map.Entry<String, DataFlowNode> entry: mNodeNameMap.entrySet()) {
 			String nodeName = entry.getKey();
 			DataFlowNode node2 = entry.getValue();
-			DebugHelper.log(TAG, nodeName + ": " + node2.getClass().getName());
+			//Log.d(TAG, nodeName + ": " + node2.getClass().getName());
+			Log.d(TAG, nodeName + ": " + node2);
 		}
-		DebugHelper.log(TAG, "Done.");
-	}
+		Log.d(TAG, "Done.");
 
+	}
+	
 	private void handleAddSensor(Bundle bundle) {
 		int deviceID = bundle.getInt(BUNDLE_DEVICE_ID);
 		int sensor = bundle.getInt(BUNDLE_SENSOR_ID);
@@ -445,6 +456,36 @@ public class FlowEngine extends Service {
 		mNotification.showNotificationNow("FlowEngine starting..");
 
 		DebugHelper.startTrace();
+	}
+
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		Bundle bundle = intent.getExtras();
+		if (bundle != null) {
+			boolean isTest = bundle.getBoolean(BUNDLE_FLOWENGINE_TEST, false);
+			if (isTest) {
+				runTest();
+			}
+		}
+		
+		return super.onStartCommand(intent, flags, startId);
+	}
+
+	private void runTest() {
+		printNodeNameMap();
+		ActivityGraphControl agc = (ActivityGraphControl)mNodeNameMap.get("|ActivityGraphControl(gps,motion)");
+		Log.d(TAG, agc.mMotionNode + "\n" + agc.mGpsSeed);
+		
+		/*printSeedNodeMap();
+		
+		SeedNode gpsSeed = mSeedNodeMap.get(SensorType.PHONE_GPS);
+		
+		if (gpsSeed != null) {
+			List<DataFlowNode> nodeList = gpsSeed.getOutPortMap().get("default");
+			for (DataFlowNode node: nodeList) {
+				Log.d(TAG, "nodeName: " + node.getName() + ": " + node.toString());
+			}
+		}*/
 	}
 
 	@Override

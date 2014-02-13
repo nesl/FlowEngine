@@ -15,6 +15,7 @@ import edu.ucla.nesl.datacollector.tools.Tools;
 public class LoginActivity extends Activity {
 
 	private TextView appTitle;
+	private TextView testTextView;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +28,18 @@ public class LoginActivity extends Activity {
 			@Override
 			public boolean onLongClick(View v) {
 				loginSuccessful();
+				return true;
+			}
+		});
+		
+		testTextView = (TextView)findViewById(R.id.test_button);
+		testTextView.setOnLongClickListener(new OnLongClickListener() {
+			
+			@Override
+			public boolean onLongClick(View v) {
+				Intent intent = new Intent(Const.FLOW_ENGINE_APPLICATION_SERVICE);
+				intent.putExtra("flowengine_test", true);
+				startService(intent);
 				return true;
 			}
 		});
