@@ -55,6 +55,8 @@ public class ZephyrDeviceService extends Service {
 	private static final int MSG_KILL = 3;
 	private static final int MSG_START_SENSOR = 4;
 	private static final int MSG_STOP_SENSOR = 5;
+	private static final int MSG_READ_PROPERTY_FILE = 6;
+	private static final int MSG_TRY_BINDING_FLOWENGINE = 7;
 
 	private static final byte START_ECG_PACKET[] = { 0x02, 0x16, 0x01, 0x01, 0x5e, 0x03 };
 	private static final byte START_RIP_PACKET[] = { 0x02, 0x15, 0x01, 0x01, 0x5e, 0x03};
@@ -660,6 +662,12 @@ public class ZephyrDeviceService extends Service {
 		@Override
 		public void handleMessage(Message msg) {
 			switch (msg.what) {
+			case MSG_READ_PROPERTY_FILE:
+				handleReadPropertyFile();
+				break;
+			case MSG_TRY_BINDING_FLOWENGINE:
+				handleTryBindingFlowEngine();
+				break;
 			case MSG_STOP:
 				unflagAllSensor();
 				handleStopAll();
@@ -684,6 +692,27 @@ public class ZephyrDeviceService extends Service {
 			}
 		}
 	};
+
+	private void handleTryBindingFlowEngine() {
+		if (mAPI == null) {
+			tryBindToFlowEngineService();
+		}
+	}
+
+	private void handleReadPropertyFile() {
+		while (bluetoothAddr == null) {
+			Log.d(TAG, "Trying to read properies..");
+			readPropertyFile();
+			if (bluetoothAddr == null) {
+				try {
+					Thread.sleep(RETRY_INTERVAL);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		} 
+		mHandler.sendMessage(mHandler.obtainMessage(MSG_TRY_BINDING_FLOWENGINE));
+	}
 
 	private void handleStopAll() {
 		sendStopAllSensorsPacket();
@@ -825,7 +854,7 @@ public class ZephyrDeviceService extends Service {
 				e.printStackTrace();
 			}
 			mAPI = null;
-			tryBindToFlowEngineService();
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_TRY_BINDING_FLOWENGINE));
 		}
 	};
 
@@ -870,21 +899,14 @@ public class ZephyrDeviceService extends Service {
 		notification.setLatestEventInfo(this, text, text, contentIntent);
 		startForeground(R.string.foreground_service_started, notification);
 		
-		while (bluetoothAddr == null) {
-			readPropertyFile();
-			if (bluetoothAddr == null) {
-				try {
-					Thread.sleep(RETRY_INTERVAL);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+		if (bluetoothAddr == null) {
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_READ_PROPERTY_FILE));
+		} else {
+			if (mAPI == null) {
+				mHandler.sendMessage(mHandler.obtainMessage(MSG_TRY_BINDING_FLOWENGINE));
 			}
-		} 
-
-		if (mAPI == null) {
-			tryBindToFlowEngineService();
 		}
-
+		
 		return START_STICKY;
 	}
 

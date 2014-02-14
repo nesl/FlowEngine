@@ -53,7 +53,9 @@ public class DataService extends Service {
 
 	private static final int RETRY_INTERVAL = 5000; // ms
 	private static final int MSG_PUBLISH = 1;
-
+	private static final int MSG_TRY_BINDING_FLOWENGINE = 2;
+	private static final int MSG_HANDLE_START_SERVICE_INTENT = 3;
+	
 	private static final String ACTIVITY_GRAPH_FILENAME = "activity.graph";
 	private static final String STRESS_GRAPH_FILENAME = "stress.graph";
 	private static final String CONVERSATION_GRAPH_FILENAME = "conversation.graph";
@@ -148,36 +150,11 @@ public class DataService extends Service {
 		Bundle bundle = intent.getExtras();
 
 		if (bundle == null && mAPI == null) {
-			Log.d(Const.TAG, "Trying to bind to flowengine service");
-			tryBindToFlowEngineService();
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_TRY_BINDING_FLOWENGINE));
 		}
 
 		if (bundle != null && mAPI != null) {
-			String requestType = bundle.getString(REQUEST_TYPE);
-			try {
-				if (requestType.equals(START_BROADCAST_SENSOR_DATA)) {
-					isBroadcastData = true;
-				} else if (requestType.equals(STOP_BROADCAST_SENSOR_DATA)) {
-					isBroadcastData = false;
-				} else if (requestType.equals(GET_SUBSCRIBED_SENSORS)) {
-					String[] sensors = mAPI.getSubscribedNodeNames(mAppID);
-					Intent i = new Intent(BROADCAST_INTENT_MESSAGE);
-					i.putExtra(BUNDLE_SUBSCRIBED_SENSORS, sensors);
-					sendBroadcast(i);
-				} else if (requestType.equals(CHANGE_SUBSCRIPTION)) {
-					String sensor = bundle.getString(EXTRA_SENSOR_NAME);
-					boolean isEnabled = bundle.getBoolean(EXTRA_IS_ENABLED);
-					if (sensor != null) {
-						if (isEnabled) {
-							mAPI.subscribe(mAppID, sensor);
-						} else {
-							mAPI.unsubscribe(mAppID, sensor);
-						}
-					}
-				}
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}		
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_HANDLE_START_SERVICE_INTENT, bundle));
 		}
 
 		return START_STICKY;
@@ -253,7 +230,7 @@ public class DataService extends Service {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			tryBindToFlowEngineService();
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_TRY_BINDING_FLOWENGINE));
 		}
 	};
 
@@ -318,10 +295,22 @@ public class DataService extends Service {
 		}
 	};
 
+	private void handleTryBindingFlowEngine() {
+		if (mAPI == null) {
+			tryBindToFlowEngineService();
+		}
+	}
+
 	private Handler mHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
 			switch (msg.what) {
+			case MSG_HANDLE_START_SERVICE_INTENT:
+				handleStartServiceIntent((Bundle)msg.obj);
+				break;
+			case MSG_TRY_BINDING_FLOWENGINE:
+				handleTryBindingFlowEngine();
+				break;
 			case MSG_PUBLISH:
 				Bundle bundle = (Bundle)msg.obj;
 
@@ -346,6 +335,34 @@ public class DataService extends Service {
 		}
 	};
 
+	private void handleStartServiceIntent(Bundle bundle) {
+		String requestType = bundle.getString(REQUEST_TYPE);
+		try {
+			if (requestType.equals(START_BROADCAST_SENSOR_DATA)) {
+				isBroadcastData = true;
+			} else if (requestType.equals(STOP_BROADCAST_SENSOR_DATA)) {
+				isBroadcastData = false;
+			} else if (requestType.equals(GET_SUBSCRIBED_SENSORS)) {
+				String[] sensors = mAPI.getSubscribedNodeNames(mAppID);
+				Intent i = new Intent(BROADCAST_INTENT_MESSAGE);
+				i.putExtra(BUNDLE_SUBSCRIBED_SENSORS, sensors);
+				sendBroadcast(i);
+			} else if (requestType.equals(CHANGE_SUBSCRIPTION)) {
+				String sensor = bundle.getString(EXTRA_SENSOR_NAME);
+				boolean isEnabled = bundle.getBoolean(EXTRA_IS_ENABLED);
+				if (sensor != null) {
+					if (isEnabled) {
+						mAPI.subscribe(mAppID, sensor);
+					} else {
+						mAPI.unsubscribe(mAppID, sensor);
+					}
+				}
+			}
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}		
+	}
+	
 	private void dumpReceivedData(long timestamp, String type, Bundle bundle, String name) {
 		Date date = new Date(timestamp);
 		String localDate = DateFormat.getDateInstance().format(date);

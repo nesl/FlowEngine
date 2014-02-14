@@ -45,6 +45,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	private static final int MSG_STOP = 2;
 	private static final int MSG_START_SENSOR = 3;
 	private static final int MSG_STOP_SENSOR = 4;
+	private static final int MSG_TRY_BINDING_FLOWENGINE = 5;
 
 	private FlowEngineAPI 	mAPI;
 	private PhoneSensorDeviceService mThisService = this;
@@ -110,7 +111,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 			Log.i(TAG, "Service connection established.");
 			mAPI = FlowEngineAPI.Stub.asInterface(service);
 			try {
-				mDeviceID = mAPI.addDevice(mAccelerometerDeviceInterface);
+				mDeviceID = mAPI.addDevice(mPhoneSensorDeviceInterface);
 				mAPI.addSensor(mDeviceID, SensorType.PHONE_ACCELEROMETER, -1);
 				mAPI.addSensor(mDeviceID, SensorType.PHONE_GPS, -1);
 				mAPI.addSensor(mDeviceID, SensorType.PHONE_BATTERY, -1);
@@ -133,11 +134,11 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 				e.printStackTrace();
 			}
 			mAPI = null;
-			tryBindToFlowEngineService();
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_TRY_BINDING_FLOWENGINE));
 		}
 	};
 
-	private DeviceAPI.Stub mAccelerometerDeviceInterface = new DeviceAPI.Stub() {
+	private DeviceAPI.Stub mPhoneSensorDeviceInterface = new DeviceAPI.Stub() {
 		@Override
 		public void start() throws RemoteException {
 			mHandler.sendMessage(mHandler.obtainMessage(MSG_START));
@@ -160,12 +161,24 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		}
 	};
 
+	private void handleTryBindingFlowEngine() {
+		if (mAPI == null) {
+			tryBindToFlowEngineService();
+		}
+	}
+
 	private Handler mHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
 			int sensor;
 			switch (msg.what) {
+			case MSG_TRY_BINDING_FLOWENGINE:
+				handleTryBindingFlowEngine();
+				break;
 			case MSG_KILL:
+				stopAccelerometer();
+				stopGPS();
+				stopBattery();
 				mThisService.stopSelf();
 				break;
 			case MSG_START:
@@ -276,7 +289,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		startForeground(R.string.foreground_service_started, notification);
 
 		if (mAPI == null) {
-			tryBindToFlowEngineService();
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_TRY_BINDING_FLOWENGINE));
 		}
 
 		return START_STICKY;
