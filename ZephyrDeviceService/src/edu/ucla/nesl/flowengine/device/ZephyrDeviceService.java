@@ -394,7 +394,6 @@ public class ZephyrDeviceService extends Service {
 					}
 				} catch (RemoteException e) {
 					e.printStackTrace();
-					break;
 				}
 			} // end while
 

@@ -38,6 +38,8 @@ public class FlowEngine extends Service {
 	private static final String BUNDLE_LENGTH = "length";
 	private static final String BUNDLE_DEVICE_ID = "deviceID";
 	private static final String BUNDLE_TIMESTAMP = "timestamp";
+	private static final String BUNDLE_CONTEXT_NAME = "context_name";
+	private static final String BUNDLE_GRAPH = "graph";
 
 	private static final int MSG_PUSH_DATA = 1;
 	private static final int MSG_SUBSCRIBE = 2;
@@ -45,6 +47,7 @@ public class FlowEngine extends Service {
 	private static final int MSG_UNREGISTER_APP = 4;
 	private static final int MSG_ADD_SENSOR = 5;
 	private static final int MSG_REMOVE_DEVICE = 6;
+	private static final int MSG_SUBMIT_GRAPH = 7;
 
 	private static final String BUNDLE_APP_ID = "app_id";
 	private static final String BUNDLE_NODE_NAME = "node_name";
@@ -102,6 +105,9 @@ public class FlowEngine extends Service {
 		@Override
 		public void handleMessage(Message msg) {
 			switch (msg.what) {
+			case MSG_SUBMIT_GRAPH:
+				handleSubmitGraph((Bundle)msg.obj);
+				break;
 			case MSG_REMOVE_DEVICE:
 				handleRemoveDevice((Bundle)msg.obj);
 				break;
@@ -126,6 +132,12 @@ public class FlowEngine extends Service {
 			}
 		}
 	};
+	
+	private void handleSubmitGraph(Bundle bundle) {
+		String contextName = bundle.getString(BUNDLE_CONTEXT_NAME);
+		String graph = bundle.getString(BUNDLE_GRAPH);
+		mGraphConfig.submitGraph(contextName, graph);
+	}
 
 	private void handleRemoveDevice(Bundle bundle) {
 		int deviceID = bundle.getInt(BUNDLE_DEVICE_ID);
@@ -323,6 +335,14 @@ public class FlowEngine extends Service {
 				return null;
 			}
 		}
+
+		@Override
+		public void submitGraph(String contextName, String graph) throws RemoteException {
+			Bundle bundle = new Bundle();
+			bundle.putString(BUNDLE_CONTEXT_NAME, contextName);
+			bundle.putString(BUNDLE_GRAPH, graph);
+			mHandler.sendMessage(mHandler.obtainMessage(MSG_SUBMIT_GRAPH, bundle));
+		}
 	};
 
 	private FlowEngineAPI.Stub mDeviceAPI = new FlowEngineAPI.Stub() {
@@ -472,13 +492,13 @@ public class FlowEngine extends Service {
 	}
 
 	private void runTest() {
+		//ActivityGraphControl agc = (ActivityGraphControl)mNodeNameMap.get("|ActivityGraphControl(gps,motion)");
+		//Log.d(TAG, agc.mMotionNode + "\n" + agc.mGpsSeed);
+		
+		printSeedNodeMap();
 		printNodeNameMap();
-		ActivityGraphControl agc = (ActivityGraphControl)mNodeNameMap.get("|ActivityGraphControl(gps,motion)");
-		Log.d(TAG, agc.mMotionNode + "\n" + agc.mGpsSeed);
 		
-		/*printSeedNodeMap();
-		
-		SeedNode gpsSeed = mSeedNodeMap.get(SensorType.PHONE_GPS);
+		/*SeedNode gpsSeed = mSeedNodeMap.get(SensorType.PHONE_GPS);
 		
 		if (gpsSeed != null) {
 			List<DataFlowNode> nodeList = gpsSeed.getOutPortMap().get("default");

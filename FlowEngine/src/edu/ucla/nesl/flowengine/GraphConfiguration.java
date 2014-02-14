@@ -4,32 +4,29 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 import android.util.Log;
-import edu.ucla.nesl.flowengine.node.ActivityGraphControl;
 import edu.ucla.nesl.flowengine.node.Buffer;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 import edu.ucla.nesl.flowengine.node.Publish;
 import edu.ucla.nesl.flowengine.node.SeedNode;
-import edu.ucla.nesl.flowengine.node.classifier.Motion;
 
 public class GraphConfiguration {
 	private static final String TAG = GraphConfiguration.class.getSimpleName();
 	
 	private Map<Integer, SeedNode> mSeedNodeMap;
 	private Map<String, DataFlowNode> mNodeNameMap;
+	private Set<String> mConfiguredGraphs;
 	
-	private boolean mIsStressGraphConfigured = false;
-	private boolean mIsConversationGraphConfigured = false;
-	private boolean mIsActivityGraphConfigured = false;
-
 	private static final int STATUS_DEFAULT = 0;
 	private static final int STATUS_DECLARE = 1;
 	private static final int STATUS_CONNECT = 2;
@@ -42,30 +39,37 @@ public class GraphConfiguration {
 	public GraphConfiguration(Map<Integer, SeedNode> seedNodeMap, Map<String, DataFlowNode> nodeNameMap) {
 		mSeedNodeMap = seedNodeMap;
 		mNodeNameMap = nodeNameMap;
+		mConfiguredGraphs = new HashSet<String>();
 	}
 	
-	public void subscribe(Application app, String nodeName) {
+	public boolean subscribe(Application app, String nodeName) {
 		Publish publish = app.getPublishNode();
 		DataFlowNode node = mNodeNameMap.get("|" + nodeName);
 		if (node == null) {
-			configureGraph(nodeName);
-			node = mNodeNameMap.get("|" + nodeName);
-			if (node == null) {
-				Log.w(TAG, nodeName + "is not configured.");
+			if (configureSeedNode(nodeName)) {
+				node = mNodeNameMap.get("|" + nodeName);
+				if (node == null) {
+					Log.e(TAG, nodeName + "is not configured.");
+					return false;
+				}
+			} else {
+				DebugHelper.loge(TAG, "Could not configure " + nodeName);
+				return false;
 			}
 		}
-		DebugHelper.log(TAG, "node = " + node);
 		node.addOutputNode(publish);
 		node.enable();
+		return true;
 	}
 
-	public void unsubscribe(Application app, String nodeName) {
+	public boolean unsubscribe(Application app, String nodeName) {
 		DataFlowNode node = mNodeNameMap.get("|" + nodeName);
 		if (node == null) {
-			return;
+			return false;
 		}
 		Publish publish = app.getPublishNode();
 		node.removeOutputNode(publish);
+		return true;
 	}
 	
 	public void removeApplication(Application removedApp) {
@@ -74,18 +78,16 @@ public class GraphConfiguration {
 		node.remove(mNodeNameMap, mSeedNodeMap);
 
 		// change flags
-		Set<String> nodeNames = removedApp.getSubscribedNodeNames();
+		/*Set<String> nodeNames = removedApp.getSubscribedNodeNames();
 		for (String nodeName: nodeNames) {
 			if (nodeName.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
-				// remove ActivityGraphControl node
-				mNodeNameMap.get("|ActivityGraphControl").remove(mNodeNameMap, mSeedNodeMap);
 				mIsActivityGraphConfigured = false;
 			} else if (nodeName.equals(SensorType.STRESS_CONTEXT_NAME)) {
 				mIsStressGraphConfigured = false;
 			} else if (nodeName.equals(SensorType.CONVERSATION_CONTEXT_NAME)) {
 				mIsConversationGraphConfigured = false;
 			}
-		}
+		}*/
 		
 		// print seed map
 		DebugHelper.log(TAG, "Printing mSeedNodeMap..");
@@ -106,25 +108,27 @@ public class GraphConfiguration {
 		DebugHelper.log(TAG, "Done.");
 	}
 	
-	private void configureGraph(String nodeName) {
-		if (nodeName.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
+	private boolean configureSeedNode(String nodeName) {
+		/*if (nodeName.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
 			configureActivityGraph();
 		} else if (nodeName.equals(SensorType.STRESS_CONTEXT_NAME)) {
 			configureStressGraph();
 		} else if (nodeName.equals(SensorType.CONVERSATION_CONTEXT_NAME)) {
 			configureConversationGraph();
-		} else {
+		} else {*/
 			int sensorID = SensorType.getSensorId(nodeName);
 			if (sensorID == -1) {
-				throw new IllegalArgumentException("nodeName: " + nodeName + " cannot be configured.");
+				DebugHelper.loge(TAG, "nodeName: " + nodeName + " cannot be configured as SeedNode.");
+				return false;
 			}
 			SeedNode seed = new SeedNode(nodeName, sensorID, null);
 			mSeedNodeMap.put(sensorID, seed);
 			seed.configureNodeName(mNodeNameMap);
-		}
+			return true;
+		//}
 	}
 	
-	public void configureActivityGraph() {
+	/*public void configureActivityGraph() {
 		if (!mIsActivityGraphConfigured) {
 			configureGraph(R.raw.activity);
 			mIsActivityGraphConfigured = true;
@@ -143,7 +147,7 @@ public class GraphConfiguration {
 			configureGraph(R.raw.conversation);
 			mIsConversationGraphConfigured = true;
 		}
-	}
+	}*/
 
 	private DataFlowNode instantiateNode(String className, String instanceName, Map<String, DataFlowNode> instanceNameMap) {
 		Class currentClass;
@@ -195,7 +199,8 @@ public class GraphConfiguration {
 						DataFlowNode node = instanceNameMap.get(param);
 						
 						if (node == null) {
-							throw new IllegalArgumentException("Wrong parameter: " + args[i]);
+							DebugHelper.loge(TAG, "Invalid parameter: " + args[i]);
+							return null;
 						}
 						
 						if (node instanceof SeedNode) {
@@ -203,8 +208,10 @@ public class GraphConfiguration {
 							SeedNode seedNode = mSeedNodeMap.get(sensorId);
 							if (seedNode == null) {
 								seedNode = (SeedNode)instanceNameMap.get(param);
-								Log.e(TAG, "seedNode still null..");
-								throw new IllegalArgumentException("seedNode still null..");
+								if (seedNode == null) {
+									DebugHelper.loge(TAG, "Invalid parameter: " + param);
+									return null;
+								}
 							}
 							parTypes[i+1] = seedNode.getClass();
 							arglist[i+1] = seedNode;
@@ -282,9 +289,8 @@ public class GraphConfiguration {
 		}
 	}
 	
-	private void configureGraph(int configResourceId) {
-		InputStream is = FlowEngine.getInstance().getResources().openRawResource(configResourceId);
-		BufferedReader configFile = new BufferedReader(new InputStreamReader(is));
+	private boolean configureGraph(String graph) {
+		BufferedReader configFile = new BufferedReader(new StringReader(graph));
 		
 		Map<String, DataFlowNode> instanceNameMap = new HashMap<String, DataFlowNode>();
 		Map<String, DataFlowNode> nodeNameMap = new HashMap<String, DataFlowNode>();
@@ -315,7 +321,7 @@ public class GraphConfiguration {
 							configFile.mark(Integer.MAX_VALUE);
 						} else {
 							DebugHelper.loge(TAG, "Unrecognized line: " + line);
-							return;
+							return false;
 						}
 						break;
 					}
@@ -330,6 +336,7 @@ public class GraphConfiguration {
 							String[] split = line.split(" ");
 							if (split.length != 2) {
 								DebugHelper.loge(TAG, "Wrong formatted declare statement: " + line);
+								return false;
 							}
 							
 							String className = split[0];
@@ -344,7 +351,7 @@ public class GraphConfiguration {
 								node = instantiateNode(className, instanceName, instanceNameMap);
 								if (node == null) {
 									DebugHelper.loge(TAG, "Failed to instantiate a node: " + line);
-									return;
+									return false;
 								} 
 							}
 							instanceNameMap.put(instanceName.split("\\(")[0], node);
@@ -377,11 +384,11 @@ public class GraphConfiguration {
 						DataFlowNode right = instanceNameMap.get(split[2]);
 						if (left == null) {
 							DebugHelper.loge(TAG, "Cannot find instance name: " + split[0]);
-							return;
+							return false;
 						}
 						if (right == null) {
 							DebugHelper.loge(TAG, "Cannot find instance name: " + split[2]);
-							return;
+							return false;
 						}
 
 						if (!isMergePass) {
@@ -412,7 +419,7 @@ public class GraphConfiguration {
 		} catch (IOException e) {
 			DebugHelper.loge(TAG, "IOException");
 			e.printStackTrace();
-			return;
+			return false;
 		}
 		
 		// initialize and add new seed to mSeedNodeMap
@@ -441,7 +448,6 @@ public class GraphConfiguration {
 		ArrayList<DataFlowNode> bufferNodes = new ArrayList<DataFlowNode>();
 		for (Map.Entry<String, DataFlowNode> entry: nodeNameMap.entrySet()) {
 			if (entry.getKey().contains("Buffer")) {
-				DebugHelper.log(TAG, "buffer node: " + entry.getKey());
 				bufferNodes.add(mNodeNameMap.get(entry.getKey()));
 			}
 		}
@@ -463,17 +469,33 @@ public class GraphConfiguration {
 		}*/
 
 		// print seed map
-		for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
+		/*for (Map.Entry<Integer, SeedNode> entry: mSeedNodeMap.entrySet()) {
 			int sensor = entry.getKey();
 			SeedNode node = entry.getValue();
 			DebugHelper.log(TAG, node.getClass().getName() + ": " + sensor + " device: " + node.getAttachedDevice());
-		}
+		}*/
 
 		// print node name map
-		for (Map.Entry<String, DataFlowNode> entry: mNodeNameMap.entrySet()) {
+		/*for (Map.Entry<String, DataFlowNode> entry: mNodeNameMap.entrySet()) {
 			String nodeName = entry.getKey();
 			DataFlowNode node = entry.getValue();
 			DebugHelper.log(TAG, nodeName + ": " + node.getClass().getName());
+		}*/
+		
+		return true;
+	}
+
+	public boolean submitGraph(String contextName, String graph) {
+		if (mNodeNameMap.get("|" + contextName) == null) {
+			if (configureGraph(graph)) {
+				Log.d(TAG, "configureGraph() true");
+				return true;
+			} else {
+				Log.d(TAG, "configureGraph() false");
+				return false;
+			}
 		}
+		Log.d(TAG, "already there!");
+		return true;
 	}
 }

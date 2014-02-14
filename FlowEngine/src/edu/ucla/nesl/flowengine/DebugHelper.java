@@ -8,7 +8,9 @@ import android.util.Log;
 
 public class DebugHelper {
 	private static final String TAG = DebugHelper.class.getSimpleName();
-	
+
+	private static boolean mIsLogging = true;
+
 	public static boolean isMethodTrace = false;
 	public static boolean isAllocCounting = false;
 	public static int traceSize = 150000000;
@@ -17,8 +19,6 @@ public class DebugHelper {
 	public static int stressCount = 0;
 	public static int conversationCount = 0;
 	public static int numCount = 5;
-	
-	private static boolean mIsLogging = true;
 	
 	private static Random rand = new Random(System.currentTimeMillis());
 	

@@ -1,10 +1,15 @@
 package edu.ucla.nesl.datacollector.service;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.util.Date;
 
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
@@ -15,7 +20,6 @@ import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
 import edu.ucla.nesl.datacollector.Const;
-import edu.ucla.nesl.datacollector.Device;
 import edu.ucla.nesl.datacollector.activity.TabSensorsActivity;
 import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.aidl.ApplicationInterface;
@@ -29,7 +33,7 @@ public class DataService extends Service {
 	public static final String BUNDLE_DATA = "data";
 	public static final String BUNDLE_LENGTH = "length";
 	public static final String BUNDLE_TIMESTAMP = "timestamp";
-
+	
 	public static final String REQUEST_TYPE = "request_type";
 
 	public static final String GET_SUBSCRIBED_SENSORS = "get_subscribed_sensors";
@@ -46,6 +50,11 @@ public class DataService extends Service {
 	private static final int RETRY_INTERVAL = 5000; // ms
 	private static final int MSG_PUBLISH = 1;
 
+	private static final String ACTIVITY_GRAPH_FILENAME = "activity.graph";
+	private static final String STRESS_GRAPH_FILENAME = "stress.graph";
+	private static final String CONVERSATION_GRAPH_FILENAME = "conversation.graph";
+	
+	private Context context = this;
 	private FlowEngineAppAPI mAPI;
 	private int mAppID;
 
@@ -156,6 +165,34 @@ public class DataService extends Service {
 		return super.onStartCommand(intent, flags, startId);
 	}
 
+	private static String getStringFromInputStream(InputStream is) {
+		 
+		BufferedReader br = null;
+		StringBuilder sb = new StringBuilder();
+ 
+		String line;
+		try {
+ 
+			br = new BufferedReader(new InputStreamReader(is));
+			while ((line = br.readLine()) != null) {
+				sb.append(line + "\n");
+			}
+ 
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+ 
+		return sb.toString();
+	}
+	
 	private ServiceConnection mServiceConnection = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
@@ -163,6 +200,24 @@ public class DataService extends Service {
 			mAPI = FlowEngineAppAPI.Stub.asInterface(service);
 			try {
 				mAppID = mAPI.register(mAppInterface);
+				try {
+					mAPI.submitGraph(SensorType.ACTIVITY_CONTEXT_NAME
+							, getStringFromInputStream(context.getAssets().open(ACTIVITY_GRAPH_FILENAME)));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				try {
+					mAPI.submitGraph(SensorType.STRESS_CONTEXT_NAME
+							, getStringFromInputStream(context.getAssets().open(STRESS_GRAPH_FILENAME)));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				try {
+					mAPI.submitGraph(SensorType.CONVERSATION_CONTEXT_NAME
+							, getStringFromInputStream(context.getAssets().open(CONVERSATION_GRAPH_FILENAME)));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 				processStoredSubscriptionStatus();
 			} catch (RemoteException e) {
 				e.printStackTrace();

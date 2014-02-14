@@ -423,7 +423,7 @@ public abstract class DataFlowNode {
 			node.removeChild(this, nodeNameMap, seedNodeMap);
 		}
 
-		// remove children
+		// remove this from children
 		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
 			List<DataFlowNode> nodeList = entry.getValue();
 			for (DataFlowNode node: nodeList) {
