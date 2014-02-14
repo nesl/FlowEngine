@@ -9,7 +9,7 @@ import android.util.Log;
 public class DebugHelper {
 	private static final String TAG = DebugHelper.class.getSimpleName();
 
-	private static boolean mIsLogging = true;
+	private static boolean mIsLogging = false;
 
 	public static boolean isMethodTrace = false;
 	public static boolean isAllocCounting = false;

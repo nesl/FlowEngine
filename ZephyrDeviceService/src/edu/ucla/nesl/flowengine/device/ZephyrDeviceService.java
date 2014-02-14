@@ -9,6 +9,8 @@ import java.io.OutputStream;
 import java.util.Properties;
 import java.util.UUID;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -284,9 +286,10 @@ public class ZephyrDeviceService extends Service {
 						int battery = receivedBytes[54] & 0x7F;
 						int buttonWorn = receivedBytes[55] & 0xF0; 
 
-						boolean isWorn = (buttonWorn & 0x80) > 0;
-						boolean isHRSignalLow =(buttonWorn & 0x20) > 0; 
-						handleChestbandStatus(isWorn && !isHRSignalLow);
+						//boolean isWorn = (buttonWorn & 0x80) > 0;
+						//boolean isHRSignalLow =(buttonWorn & 0x20) > 0; 
+						//handleChestbandStatus(isWorn);
+						handleChestbandStatus(true);
 
 						if (mIsSkinTemp) {
 							mAPI.pushInt(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, timestamp);
@@ -847,7 +850,7 @@ public class ZephyrDeviceService extends Service {
 
 		// Bind to the FlowEngine service.
 		numRetries = 1;
-		while (!bindService(intent, mServiceConnection, 0)) {
+		while (!bindService(intent, mServiceConnection, BIND_AUTO_CREATE)) {
 			Log.d(TAG, "Retrying to bind to FlowEngineService.. (" + numRetries + ")");
 			numRetries++;
 			try {
@@ -861,6 +864,12 @@ public class ZephyrDeviceService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
+		CharSequence text = getText(R.string.foreground_service_started);
+		Notification notification = new Notification(R.drawable.ic_launcher, text, System.currentTimeMillis());
+		PendingIntent contentIntent = PendingIntent.getBroadcast(this, 0, new Intent(), 0);
+		notification.setLatestEventInfo(this, text, text, contentIntent);
+		startForeground(R.string.foreground_service_started, notification);
+		
 		while (bluetoothAddr == null) {
 			readPropertyFile();
 			if (bluetoothAddr == null) {
@@ -876,7 +885,7 @@ public class ZephyrDeviceService extends Service {
 			tryBindToFlowEngineService();
 		}
 
-		return super.onStartCommand(intent, flags, startId);
+		return START_STICKY;
 	}
 
 	private void readPropertyFile() {
@@ -909,6 +918,8 @@ public class ZephyrDeviceService extends Service {
 			e.printStackTrace();
 		}
 
+		stopForeground(true);
+		
 		super.onDestroy();
 	}
 

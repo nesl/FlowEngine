@@ -7,6 +7,9 @@ import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.util.Date;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
@@ -20,6 +23,7 @@ import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
 import edu.ucla.nesl.datacollector.Const;
+import edu.ucla.nesl.datacollector.R;
 import edu.ucla.nesl.datacollector.activity.TabSensorsActivity;
 import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.aidl.ApplicationInterface;
@@ -33,7 +37,7 @@ public class DataService extends Service {
 	public static final String BUNDLE_DATA = "data";
 	public static final String BUNDLE_LENGTH = "length";
 	public static final String BUNDLE_TIMESTAMP = "timestamp";
-	
+
 	public static final String REQUEST_TYPE = "request_type";
 
 	public static final String GET_SUBSCRIBED_SENSORS = "get_subscribed_sensors";
@@ -53,15 +57,20 @@ public class DataService extends Service {
 	private static final String ACTIVITY_GRAPH_FILENAME = "activity.graph";
 	private static final String STRESS_GRAPH_FILENAME = "stress.graph";
 	private static final String CONVERSATION_GRAPH_FILENAME = "conversation.graph";
-	
+
+	private static final int LED_NOTIFICATION_ID = 1000;
+
 	private Context context = this;
 	private FlowEngineAppAPI mAPI;
 	private int mAppID;
 
 	private boolean isBroadcastData = false; 
 
+	private NotificationManager notiManager;
+
 	@Override
 	public void onCreate() {
+		notiManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
 		super.onCreate();
 	}
 
@@ -81,7 +90,7 @@ public class DataService extends Service {
 
 		// Bind to the FlowEngine service.
 		numRetries = 1;
-		while (!bindService(intent, mServiceConnection, 0)) {
+		while (!bindService(intent, mServiceConnection, BIND_AUTO_CREATE)) {
 			Log.d(Const.TAG, "Retrying to bind to FlowEngineService.. (" + numRetries + ")");
 			numRetries++;
 			try {
@@ -108,7 +117,6 @@ public class DataService extends Service {
 
 	@Override
 	public void onDestroy() {
-		Log.d(Const.TAG, "onDestroy()");
 		try {
 			if (mAPI != null) {
 				mAPI.unregister(mAppID);
@@ -117,6 +125,9 @@ public class DataService extends Service {
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
+		
+		stopForeground(true);
+		
 		super.onDestroy();
 	}
 
@@ -127,6 +138,13 @@ public class DataService extends Service {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		
+		CharSequence text = getText(R.string.foreground_service_started);
+		Notification notification = new Notification(R.drawable.ic_launcher, text, System.currentTimeMillis());
+		PendingIntent contentIntent = PendingIntent.getBroadcast(this, 0, new Intent(), 0);
+		notification.setLatestEventInfo(this, text, text, contentIntent);
+		startForeground(R.string.foreground_service_started, notification);
+		
 		Bundle bundle = intent.getExtras();
 
 		if (bundle == null && mAPI == null) {
@@ -162,22 +180,22 @@ public class DataService extends Service {
 			}		
 		}
 
-		return super.onStartCommand(intent, flags, startId);
+		return START_STICKY;
 	}
 
 	private static String getStringFromInputStream(InputStream is) {
-		 
+
 		BufferedReader br = null;
 		StringBuilder sb = new StringBuilder();
- 
+
 		String line;
 		try {
- 
+
 			br = new BufferedReader(new InputStreamReader(is));
 			while ((line = br.readLine()) != null) {
 				sb.append(line + "\n");
 			}
- 
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
@@ -189,10 +207,10 @@ public class DataService extends Service {
 				}
 			}
 		}
- 
+
 		return sb.toString();
 	}
-	
+
 	private ServiceConnection mServiceConnection = new ServiceConnection() {
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
@@ -307,6 +325,8 @@ public class DataService extends Service {
 			case MSG_PUBLISH:
 				Bundle bundle = (Bundle)msg.obj;
 
+				handleLEDNotification(bundle);
+
 				if (isBroadcastData) {
 					Intent i = new Intent(BROADCAST_INTENT_MESSAGE);
 					i.putExtras(bundle);
@@ -324,50 +344,97 @@ public class DataService extends Service {
 			}
 			super.handleMessage(msg);
 		}
-
-		private void dumpReceivedData(long timestamp, String type, Bundle bundle, String name) {
-			Date date = new Date(timestamp);
-			String localDate = DateFormat.getDateInstance().format(date);
-			String localTime = DateFormat.getTimeInstance().format(date);
-			String lastUpdateString = "\nLast Updated: " + localDate + ' ' + localTime;
-
-			if (type.equals("String")) {
-				String data = bundle.getString(BUNDLE_DATA);
-				String str = data + lastUpdateString;
-				if (name.equals(SensorType.PHONE_BATTERY_NAME)) {
-					Log.d(Const.TAG, str);
-				} else if (name.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
-					Log.d(Const.TAG, str);
-				} else if (name.equals(SensorType.STRESS_CONTEXT_NAME)) {
-					Log.d(Const.TAG, str);
-				} else if (name.equals(SensorType.CONVERSATION_CONTEXT_NAME)) {
-					Log.d(Const.TAG, str);
-				}
-			} else if (type.equals("double[]")) {
-				double[] data = bundle.getDoubleArray(BUNDLE_DATA);
-				String str = name + ": { ";
-				for (double v : data) {
-					str += v + ", ";
-				}
-				str = str.substring(0, str.length() - 2) + " }";
-				Log.d(Const.TAG, str + lastUpdateString);
-			} else if (type.equals("int[]")) {
-				int[] data = bundle.getIntArray(BUNDLE_DATA);
-				String str = name + ": { ";
-				for (int v : data) {
-					str += v + ", ";
-				}
-				str = str.substring(0, str.length() - 2) + " }";
-				Log.d(Const.TAG, str + lastUpdateString);
-			} else if (type.equals("int")) {
-				int data = bundle.getInt(BUNDLE_DATA);
-				Log.d(Const.TAG, name + ": " + data + lastUpdateString);
-			} else if (type.equals("double")) {
-				double data = bundle.getDouble(BUNDLE_DATA);
-				Log.d(Const.TAG, name + ": " + data + lastUpdateString);
-			} else {
-				Log.d(Const.TAG, "Unknown type: " + type);
-			}
-		}
 	};
+
+	private void dumpReceivedData(long timestamp, String type, Bundle bundle, String name) {
+		Date date = new Date(timestamp);
+		String localDate = DateFormat.getDateInstance().format(date);
+		String localTime = DateFormat.getTimeInstance().format(date);
+		String lastUpdateString = "\nLast Updated: " + localDate + ' ' + localTime;
+
+		if (type.equals("String")) {
+			String data = bundle.getString(BUNDLE_DATA);
+			String str = data + lastUpdateString;
+			if (name.equals(SensorType.PHONE_BATTERY_NAME)) {
+				Log.d(Const.TAG, str);
+			} else if (name.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
+				Log.d(Const.TAG, str);
+			} else if (name.equals(SensorType.STRESS_CONTEXT_NAME)) {
+				Log.d(Const.TAG, str);
+			} else if (name.equals(SensorType.CONVERSATION_CONTEXT_NAME)) {
+				Log.d(Const.TAG, str);
+			}
+		} else if (type.equals("double[]")) {
+			double[] data = bundle.getDoubleArray(BUNDLE_DATA);
+			String str = name + ": { ";
+			for (double v : data) {
+				str += v + ", ";
+			}
+			str = str.substring(0, str.length() - 2) + " }";
+			Log.d(Const.TAG, str + lastUpdateString);
+		} else if (type.equals("int[]")) {
+			int[] data = bundle.getIntArray(BUNDLE_DATA);
+			String str = name + ": { ";
+			for (int v : data) {
+				str += v + ", ";
+			}
+			str = str.substring(0, str.length() - 2) + " }";
+			Log.d(Const.TAG, str + lastUpdateString);
+		} else if (type.equals("int")) {
+			int data = bundle.getInt(BUNDLE_DATA);
+			Log.d(Const.TAG, name + ": " + data + lastUpdateString);
+		} else if (type.equals("double")) {
+			double data = bundle.getDouble(BUNDLE_DATA);
+			Log.d(Const.TAG, name + ": " + data + lastUpdateString);
+		} else {
+			Log.d(Const.TAG, "Unknown type: " + type);
+		}
+	}
+
+	private boolean isRedOn = false;
+	private boolean isGreenOn = false;
+
+	private void handleLEDNotification(Bundle bundle) {
+		String name = bundle.getString(DataService.BUNDLE_NAME);
+		if (name.equals(SensorType.ACTIVITY_CONTEXT_NAME)) {
+			flipActivityFlag();
+			updateLed();
+		} else if (name.equals(SensorType.ZEPHYR_BATTERY_NAME)) {
+			flipZephyrBatteryFlag();
+			updateLed();
+		}
+	}
+
+	private void flipActivityFlag() {
+		if (isRedOn) {
+			isRedOn = false;
+		} else {
+			isRedOn = true;
+		}
+	}
+	
+	private void flipZephyrBatteryFlag() {
+		if (isGreenOn) {
+			isGreenOn = false;
+		} else {
+			isGreenOn = true;
+		}
+	}
+	
+	private void updateLed()
+	{
+		notiManager.cancel(LED_NOTIFICATION_ID);
+		Notification notif = new Notification();
+		notif.flags = Notification.FLAG_SHOW_LIGHTS;
+		if (isRedOn && isGreenOn) {
+			notif.ledARGB = 0xFF0000ff;
+			notiManager.notify(LED_NOTIFICATION_ID, notif);
+		} else if (isRedOn && !isGreenOn) {
+			notif.ledARGB = 0xFFff0000;
+			notiManager.notify(LED_NOTIFICATION_ID, notif);
+		} else if (!isRedOn && isGreenOn) {
+			notif.ledARGB = 0xFF00ff00;
+			notiManager.notify(LED_NOTIFICATION_ID, notif);
+		}
+	}
 }

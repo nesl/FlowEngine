@@ -1,12 +1,13 @@
 package edu.ucla.nesl.flowengine;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Bundle;
@@ -20,7 +21,6 @@ import edu.ucla.nesl.flowengine.aidl.ApplicationInterface;
 import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAppAPI;
-import edu.ucla.nesl.flowengine.node.ActivityGraphControl;
 import edu.ucla.nesl.flowengine.node.DataFlowNode;
 import edu.ucla.nesl.flowengine.node.SeedNode;
 import edu.ucla.nesl.util.NotificationHelper;
@@ -155,8 +155,7 @@ public class FlowEngine extends Service {
 						mNodeNameMap.remove("|" + SensorType.getSensorName(sensor.getSensorID()));
 					}
 				}
-				DebugHelper.log(TAG, "Removed device ID: " + deviceID);
-				mNotification.showNotificationNow("Removed device ID " + deviceID);
+				//mNotification.showNotificationNow("Removed device ID " + deviceID);
 			}
 		}
 	}
@@ -225,7 +224,8 @@ public class FlowEngine extends Service {
 		String nodeName = bundle.getString(BUNDLE_NODE_NAME);
 		mApplicationMap.get(appId).addSubscribedNodeNames(nodeName);
 		mGraphConfig.subscribe(mApplicationMap.get(appId), nodeName);
-		mNotification.showNotificationNow("Subscribed " + nodeName);
+		
+		//mNotification.showNotificationNow("Subscribed " + nodeName);
 	}
 
 	private void handleUnsubscribe(Bundle bundle) {
@@ -233,7 +233,8 @@ public class FlowEngine extends Service {
 		String nodeName = bundle.getString(BUNDLE_NODE_NAME);
 		mApplicationMap.get(appId).removeSubscribedNodeNames(nodeName);
 		mGraphConfig.unsubscribe(mApplicationMap.get(appId), nodeName);
-		mNotification.showNotificationNow("Unsubscribed " + nodeName);
+		
+		//mNotification.showNotificationNow("Unsubscribed " + nodeName);
 	}
 
 	private void handlePushData(Bundle bundle) {
@@ -259,7 +260,7 @@ public class FlowEngine extends Service {
 		long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
 
 		// show notification
-		showNotification(sensor, name);
+		//showNotification(sensor, name);
 
 		if (type.equals(DataType.DOUBLE_ARRAY)) {
 			seed.input(name, type, bundle.getDoubleArray(BUNDLE_DATA), length, timestamp);
@@ -296,8 +297,7 @@ public class FlowEngine extends Service {
 				mApplicationMap.put(appID, app);
 				mNextApplicationID += 1;
 
-				DebugHelper.log(TAG, "Registered application ID " + appID);
-				mNotification.showNotificationNow("Registered application ID: " + appID);
+				//mNotification.showNotificationNow("Registered application ID: " + appID);
 
 				return appID;
 			}
@@ -365,8 +365,7 @@ public class FlowEngine extends Service {
 				mNextDeviceID += 1;
 				mDeviceMap.put(deviceID, device);
 
-				mNotification.showNotificationNow("Added device ID " + deviceID);
-				DebugHelper.log(TAG, "Added device ID: " + deviceID);
+				//mNotification.showNotificationNow("Added device ID " + deviceID);
 
 				return deviceID;
 			}
@@ -467,19 +466,25 @@ public class FlowEngine extends Service {
 
 	@Override
 	public void onCreate() {
-		super.onCreate();
-		DebugHelper.logi(TAG, "Service creating..");
-
+		
 		INSTANCE = this;
 
 		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
-		mNotification.showNotificationNow("FlowEngine starting..");
 
 		DebugHelper.startTrace();
+		
+		super.onCreate();
 	}
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		
+		CharSequence text = getText(R.string.foreground_service_started);
+		Notification notification = new Notification(R.drawable.ic_launcher, text, System.currentTimeMillis());
+		PendingIntent contentIntent = PendingIntent.getBroadcast(this, 0, new Intent(), 0);
+		notification.setLatestEventInfo(this, text, text, contentIntent);
+		startForeground(R.string.foreground_service_started, notification);
+		
 		Bundle bundle = intent.getExtras();
 		if (bundle != null) {
 			boolean isTest = bundle.getBoolean(BUNDLE_FLOWENGINE_TEST, false);
@@ -488,7 +493,7 @@ public class FlowEngine extends Service {
 			}
 		}
 		
-		return super.onStartCommand(intent, flags, startId);
+		return START_STICKY;
 	}
 
 	private void runTest() {
@@ -510,10 +515,7 @@ public class FlowEngine extends Service {
 
 	@Override
 	public void onDestroy() {
-		DebugHelper.logi(TAG, "Service destroying..");
 		DebugHelper.stopTrace();
-
-		mNotification.showNotificationNow("FlowEngine destryong..");
 
 		// Kill device services
 		//for (Map.Entry<Integer, Device> entry : mDeviceMap.entrySet()) {
@@ -524,6 +526,8 @@ public class FlowEngine extends Service {
 		//	}
 		//}
 
+		stopForeground(true);
+		
 		super.onDestroy();
 	}
 
@@ -531,7 +535,7 @@ public class FlowEngine extends Service {
 		synchronized(mApplicationMap) {
 			Application removedApp = mApplicationMap.remove(appId);
 			mGraphConfig.removeApplication(removedApp);
-			mNotification.showNotificationNow("Unregistering application ID " + appId);
+			//mNotification.showNotificationNow("Unregistering application ID " + appId);
 		}
 	}
 }

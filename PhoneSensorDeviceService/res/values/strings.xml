@@ -3,5 +3,6 @@
 
     <string name="hello">Hello FlowEngineAbstractDevice-Accelerometer!</string>
     <string name="app_name">PhoneSensorDeviceService</string>
-
+    <string name="foreground_service_started">Phone sensor service running..</string>
+    
 </resources>

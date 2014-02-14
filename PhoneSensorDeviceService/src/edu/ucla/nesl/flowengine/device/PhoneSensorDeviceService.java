@@ -1,5 +1,7 @@
 package edu.ucla.nesl.flowengine.device;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -25,6 +27,7 @@ import android.util.Log;
 import edu.ucla.nesl.flowengine.SensorType;
 import edu.ucla.nesl.flowengine.aidl.DeviceAPI;
 import edu.ucla.nesl.flowengine.aidl.FlowEngineAPI;
+import edu.ucla.nesl.flowengine.device.phone.R;
 
 public class PhoneSensorDeviceService extends Service implements SensorEventListener, LocationListener {
 
@@ -265,11 +268,18 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		
+		CharSequence text = getText(R.string.foreground_service_started);
+		Notification notification = new Notification(R.drawable.ic_launcher, text, System.currentTimeMillis());
+		PendingIntent contentIntent = PendingIntent.getBroadcast(this, 0, new Intent(), 0);
+		notification.setLatestEventInfo(this, text, text, contentIntent);
+		startForeground(R.string.foreground_service_started, notification);
+
 		if (mAPI == null) {
 			tryBindToFlowEngineService();
 		}
 
-		return super.onStartCommand(intent, flags, startId);
+		return START_STICKY;
 	}
 
 	private void tryBindToFlowEngineService() {
@@ -288,7 +298,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 
 		// Bind to the FlowEngine service.
 		numRetries = 1;
-		while (!bindService(intent, mServiceConnection, 0)) {
+		while (!bindService(intent, mServiceConnection, BIND_AUTO_CREATE)) {
 			Log.d(TAG, "Retrying to bind to FlowEngineService.. (" + numRetries + ")");
 			numRetries++;
 			try {
@@ -316,6 +326,8 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
+		
+		stopForeground(true);
 
 		super.onDestroy();
 	}
