@@ -21,7 +21,7 @@ public class PeakValley extends DataFlowNode {
 	 */
 	private double mPeakThreshold;								
 	private final double PEAK_THRESHOLD_PERCENTILE = 75.0;
-	private final double FALLBACK_PEAK_THRESHOLD_PERCENTILE=65.0;
+	private final double FALLBACK_PEAK_THRESHOLD_PERCENTILE = 65.0;
 	
 	/**
 	 * minimum distance between two real peaks. typically duration of respiration period is more or less four seconds. 

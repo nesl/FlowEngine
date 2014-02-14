@@ -2,11 +2,11 @@ package edu.ucla.nesl.flowengine.node;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import android.util.Log;
 import edu.ucla.nesl.flowengine.DebugHelper;
 
 // Note: currently a node cannot be pulled by more than one node due to unregister process.
@@ -299,6 +299,14 @@ public abstract class DataFlowNode {
 			for (DataFlowNode node: mParentList) {
 				node.enableParents();
 			}
+			
+			// enabling pulled nodes
+			for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
+				List<DataFlowNode> nodeList = entry.getValue();
+				for (DataFlowNode node: nodeList) {
+					node.enableParents();
+				}
+			}
 		}
 	}
 
@@ -314,6 +322,14 @@ public abstract class DataFlowNode {
 				node.enableChildren();
 			}
 		}
+		
+		// enabling pulled nodes
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
+			for (DataFlowNode node: nodeList) {
+				node.enableParents();
+			}
+		}
 	}
 
 	public void enable() {
@@ -322,6 +338,7 @@ public abstract class DataFlowNode {
 		}
 		mIsEnabled = true;
 		DebugHelper.log(TAG, this.toString() + " initiate enabling..");
+		
 		// enabling children
 		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mOutPortMap.entrySet()) {
 			List<DataFlowNode> nodeList = entry.getValue();
@@ -329,6 +346,15 @@ public abstract class DataFlowNode {
 				node.enableChildren();
 			}
 		}
+
+		// enabling pulled nodes
+		for (Map.Entry<String, CopyOnWriteArrayList<DataFlowNode>> entry: mPullPortMap.entrySet()) {
+			List<DataFlowNode> nodeList = entry.getValue();
+			for (DataFlowNode node: nodeList) {
+				node.enableParents();
+			}
+		}
+
 		// enabling parents
 		// check if seed node.
 		if (mParentList.size() == 0) {
