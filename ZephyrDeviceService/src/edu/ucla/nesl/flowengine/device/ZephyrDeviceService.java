@@ -36,7 +36,11 @@ public class ZephyrDeviceService extends Service {
 
 	private static final int RETRY_INTERVAL = 5000; // ms
 	private static final int LIFE_SIGN_SEND_INTERVAL = 8000; //ms
-	
+	private static final int VALID_WORN_DURATION = 3000; // ms
+	private static final int VALID_UNWORN_DURATION = 3000; // ms
+	private static final int ECG_PACKET_TIMEOUT = 500; // ms (ECG packet period = 252 ms)
+	private static final int RIP_PACKET_TIMEOUT = 1500; // ms (RIP packet period = 1.008 sec);
+
 	private static final String NOTI_TITLE = "Zephyr Device Service";
 	private static final String FLOW_ENGINE_SERVICE_NAME = "edu.ucla.nesl.flowengine.FlowEngine";
 	private static final String BLUETOOTH_SERVICE_UUID = "00001101-0000-1000-8000-00805f9b34fb";
@@ -91,15 +95,20 @@ public class ZephyrDeviceService extends Service {
 	private boolean mIsECG = false;
 	private boolean mIsRIP = false;
 	private boolean mIsAccelerometer = false;
-	
+
+	private long lastWornTime = -1;
+	private long lastUnwornTime = -1;
+	private long lastECGRecvTime = -1;
+	private long lastRIPRecvTime = -1;
+
 	@Override
 	public void onCreate() {
 		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
-	
+
 		PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
 		mWakeLock.setReferenceCounted(false);
-	
+
 		super.onCreate();
 	}
 
@@ -111,7 +120,7 @@ public class ZephyrDeviceService extends Service {
 		mIsRIP = false;
 		mIsAccelerometer = false;
 	}
-	
+
 	private void flagAllSensor() {
 		mIsSkinTemp = true;
 		mIsBattery = true;
@@ -120,7 +129,7 @@ public class ZephyrDeviceService extends Service {
 		mIsRIP = true;
 		mIsAccelerometer = true;
 	}
-	
+
 	private boolean connect(String deviceAddress) {
 		BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
 		BluetoothDevice device = btAdapter.getRemoteDevice(deviceAddress);
@@ -176,19 +185,15 @@ public class ZephyrDeviceService extends Service {
 			return false;
 		}
 
-		if (mIsECG) {
-			sendStartECGPacket();
-		}
-		if (mIsRIP) {
-			sendStartRIPPacket();
-		}
+		sendStopAllSensorsPacket();
+
 		if (mIsAccelerometer) {
 			sendStartAccPacket();
 		}
-		if (mIsSkinTemp || mIsBattery || mIsButtonWorn) {
+		if (mIsECG || mIsRIP || mIsSkinTemp || mIsBattery || mIsButtonWorn) {
 			sendStartGeneralPacket();
 		}
-		
+
 		return true;
 	}
 
@@ -278,6 +283,11 @@ public class ZephyrDeviceService extends Service {
 						int skinTemp = (receivedBytes[16]&0xFF) | ((receivedBytes[17]&0xFF)<<8);
 						int battery = receivedBytes[54] & 0x7F;
 						int buttonWorn = receivedBytes[55] & 0xF0; 
+
+						boolean isWorn = (buttonWorn & 0x80) > 0;
+						boolean isHRSignalLow =(buttonWorn & 0x20) > 0; 
+						handleChestbandStatus(isWorn && !isHRSignalLow);
+
 						if (mIsSkinTemp) {
 							mAPI.pushInt(mDeviceID, SensorType.SKIN_TEMPERATURE, skinTemp, timestamp);
 						}
@@ -291,6 +301,7 @@ public class ZephyrDeviceService extends Service {
 						//Log.d(TAG, "Received Breathing Waveform Packet");
 						int[] breathingData = new int[18];
 						long timestamp = System.currentTimeMillis();
+						lastRIPRecvTime = timestamp;
 						for (int i=12, j=0; i<35; i+=5)	{
 							breathingData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
 							if (i+2 < 35)
@@ -304,7 +315,9 @@ public class ZephyrDeviceService extends Service {
 						//breathingData = mFakeRIPData[mFakeRIPDataIndex];
 
 						// sample interval: 56ms
-						mAPI.pushIntArray(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
+						if (mIsRIP) {
+							mAPI.pushIntArray(mDeviceID, SensorType.RIP, breathingData, breathingData.length, timestamp);
+						}
 
 						//mFakeRIPDataIndex++;
 						//if (mFakeRIPDataIndex >= mFakeRIPData.length) {
@@ -314,6 +327,7 @@ public class ZephyrDeviceService extends Service {
 					} else if (msgID == 0x22) {
 						//Log.d(TAG, "Received ECG Waveform Packet");
 						long timestamp = System.currentTimeMillis();
+						lastECGRecvTime = timestamp;
 						int[] ecgData = new int[63];
 						for (int i=12, j=0; i<91; i+=5) {
 							ecgData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
@@ -331,7 +345,9 @@ public class ZephyrDeviceService extends Service {
 						//Log.d(TAG, "ECG Data: " + dump);
 
 						// sample iterval: 4ms
-						mAPI.pushIntArray(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
+						if (mIsECG) {
+							mAPI.pushIntArray(mDeviceID, SensorType.ECG, ecgData, ecgData.length, timestamp);
+						}
 					} else if (msgID == 0x25) {
 						//Log.d(TAG, "Received Accelerometer Packet");
 						int[] accData = new int[60];
@@ -351,9 +367,11 @@ public class ZephyrDeviceService extends Service {
 							accSample[0] = convertADCtoG(accData[i]);
 							accSample[1] = convertADCtoG(accData[i+1]);
 							accSample[2] = convertADCtoG(accData[i+2]);
-							
+
 							// sample interval: 20ms
-							mAPI.pushDoubleArray(mDeviceID, SensorType.CHEST_ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
+							if (mIsAccelerometer) {
+								mAPI.pushDoubleArray(mDeviceID, SensorType.CHEST_ACCELEROMETER, accSample, accSample.length, timestamp + (j * 20));
+							}
 						}
 					} else if (msgID == 0x23 ) {
 						//Log.d(TAG, "Recevied lifesign from Zephyr.");
@@ -412,7 +430,60 @@ public class ZephyrDeviceService extends Service {
 			mNotification.showNotificationNow("Receiving stopped.");
 			releaseWakeLock();
 		}
+
 	};
+
+	private void handleChestbandStatus(boolean isGood) {
+		//Log.d(TAG, "isGood: " + isGood);
+		long curTime = System.currentTimeMillis();
+		if (isGood) {
+			lastUnwornTime = -1;
+			if (lastWornTime < 0) {
+				lastWornTime = curTime;
+			} else {
+				if (curTime - lastWornTime >= VALID_WORN_DURATION) {
+					startWornRelatedSensors();
+				}
+			}
+		} else {
+			lastWornTime = -1;
+			if (lastUnwornTime < 0) {
+				lastUnwornTime = curTime;
+			} else {
+				if (curTime - lastUnwornTime >= VALID_UNWORN_DURATION) {
+					stopWornRelatedSensors();
+				}
+			}
+		}
+	}
+
+	private void startWornRelatedSensors() {
+		long curTime = System.currentTimeMillis();
+		if (mIsECG) {
+			if (curTime - lastECGRecvTime > ECG_PACKET_TIMEOUT) {
+				sendStartECGPacket();
+			}
+		}
+		if (mIsRIP) {
+			if (curTime - lastRIPRecvTime > RIP_PACKET_TIMEOUT) {
+				sendStartRIPPacket();
+			}
+		}
+	}
+
+	private void stopWornRelatedSensors() {
+		long curTime = System.currentTimeMillis();
+		if (mIsECG) {
+			if (curTime - lastECGRecvTime < ECG_PACKET_TIMEOUT) {
+				sendStopECGPacket();
+			}
+		}
+		if (mIsRIP) {
+			if (curTime - lastRIPRecvTime < RIP_PACKET_TIMEOUT) {
+				sendStopRIPPacket();
+			}
+		}
+	}
 
 	private void stopReceiveThread() {
 		if (mReceiveThread != null && !mIsStopRequest)
@@ -468,6 +539,7 @@ public class ZephyrDeviceService extends Service {
 	}
 
 	private void sendStartECGPacket() {
+		//Log.d(TAG, "sendStartECGPacket()");
 		if (mOutputStream != null) {
 			try {
 				mOutputStream.write(START_ECG_PACKET);
@@ -480,6 +552,7 @@ public class ZephyrDeviceService extends Service {
 	}
 
 	private void sendStartRIPPacket() {
+		//Log.d(TAG, "sendStartRIPPacket()");
 		if (mOutputStream != null) {
 			try {
 				mOutputStream.write(START_RIP_PACKET);
@@ -531,6 +604,7 @@ public class ZephyrDeviceService extends Service {
 	}
 
 	private void sendStopECGPacket() {
+		//Log.d(TAG, "sendStopECGPacket()");
 		if (mOutputStream != null) {
 			try {
 				mOutputStream.write(STOP_ECG_PACKET);
@@ -543,6 +617,7 @@ public class ZephyrDeviceService extends Service {
 	}
 
 	private void sendStopRIPPacket() {
+		//Log.d(TAG, "sendStopRIPPacket()");
 		if (mOutputStream != null) {
 			try {
 				mOutputStream.write(STOP_RIP_PACKET);
@@ -591,6 +666,8 @@ public class ZephyrDeviceService extends Service {
 				handleStartAll();
 				break;
 			case MSG_KILL:
+				unflagAllSensor();
+				handleStopAll();
 				mThisService.stopSelf();
 				break;
 			case MSG_START_SENSOR:
@@ -634,7 +711,7 @@ public class ZephyrDeviceService extends Service {
 			mIsButtonWorn = false;
 			break;
 		}
-		if (!mIsSkinTemp && !mIsBattery && !mIsButtonWorn) {
+		if (isAllSensorExceptAccUnflagged()) {
 			sendStopGeneralPacket();
 		}
 		if (isAllSensorUnflagged()) {
@@ -646,9 +723,14 @@ public class ZephyrDeviceService extends Service {
 		return !mIsECG && !mIsRIP && !mIsAccelerometer && !mIsSkinTemp && !mIsBattery && !mIsButtonWorn;
 	}
 
+	private boolean isAllSensorExceptAccUnflagged() {
+		return !mIsECG && !mIsRIP && !mIsSkinTemp && !mIsBattery && !mIsButtonWorn;
+	}
+
 	private void handleStartAll() {
 		if (tryToConnect()) {
-			sendStartAllSensorsPacket();
+			sendStartGeneralPacket();
+			//sendStartAllSensorsPacket();
 		}
 	}
 
@@ -657,11 +739,13 @@ public class ZephyrDeviceService extends Service {
 			switch (sensorId) {
 			case SensorType.ECG:
 				mIsECG = true;
-				sendStartECGPacket();
+				sendStartGeneralPacket();
+				//sendStartECGPacket();
 				break;
 			case SensorType.RIP:
 				mIsRIP = true;
-				sendStartRIPPacket();
+				sendStartGeneralPacket();
+				//sendStartRIPPacket();
 				break;
 			case SensorType.CHEST_ACCELEROMETER:
 				mIsAccelerometer = true;
