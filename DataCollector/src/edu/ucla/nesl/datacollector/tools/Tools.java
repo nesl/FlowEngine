@@ -1,7 +1,5 @@
 package edu.ucla.nesl.datacollector.tools;
 
-import javax.sql.DataSource;
-
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;

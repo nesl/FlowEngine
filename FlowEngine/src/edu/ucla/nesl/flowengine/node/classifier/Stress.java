@@ -171,7 +171,7 @@ public class Stress extends DataFlowNode {
 		if (isAllFeature()) {
 			boolean isStress = getStressPredictionSVM(mFeatures);
 			DebugHelper.log(TAG, "isStress: " + isStress);
-			output(SensorType.STRESS_CONTEXT_NAME, DataType.STRING, getClassString(isStress), 0, timestamp);
+			output(SensorType.STRESS_CONTEXT_NAME, DataType.INTEGER, isStress ? SensorType.STRESS : SensorType.NO_STRESS, 0, timestamp);
 			clearFeatureBitVector();
 			
 			synchronized (DebugHelper.lock){

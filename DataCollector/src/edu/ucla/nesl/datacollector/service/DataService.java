@@ -18,11 +18,14 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
 import edu.ucla.nesl.datacollector.Const;
+import edu.ucla.nesl.datacollector.DataArchive;
 import edu.ucla.nesl.datacollector.R;
 import edu.ucla.nesl.datacollector.activity.TabSensorsActivity;
 import edu.ucla.nesl.flowengine.SensorType;
@@ -70,10 +73,61 @@ public class DataService extends Service {
 
 	private NotificationManager notiManager;
 
+	private DataArchive dataArchive;
+	
+	private ServiceHandler mHandler; 
+	private Looper mServiceLooper;
+	
+	final class ServiceHandler extends Handler {
+		public ServiceHandler(Looper looper) {
+			super(looper);
+		}
+		
+		@Override
+		public void handleMessage(Message msg) {
+			switch (msg.what) {
+			case MSG_HANDLE_START_SERVICE_INTENT:
+				handleStartServiceIntent((Bundle)msg.obj);
+				break;
+			case MSG_TRY_BINDING_FLOWENGINE:
+				handleTryBindingFlowEngine();
+				break;
+			case MSG_PUBLISH:
+				Bundle bundle = (Bundle)msg.obj;
+
+				handleLEDNotification(bundle);
+
+				if (isBroadcastData) {
+					Intent i = new Intent(BROADCAST_INTENT_MESSAGE);
+					i.putExtras(bundle);
+					sendBroadcast(i);
+				}
+
+				dataArchive.storeData(bundle);
+				
+				/*String name = bundle.getString(BUNDLE_NAME);
+				long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
+				int length = bundle.getInt(BUNDLE_LENGTH);
+				String type = bundle.getString(BUNDLE_TYPE);
+
+				dumpReceivedData(timestamp, type, bundle, name);*/
+
+				break;
+			}
+			super.handleMessage(msg);
+		}
+	}
+	
 	@Override
 	public void onCreate() {
-		notiManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
 		super.onCreate();
+		
+		notiManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+		
+		HandlerThread thread = new HandlerThread(this.getClass().getName());
+		thread.start();
+		mServiceLooper = thread.getLooper();
+		mHandler = new ServiceHandler(mServiceLooper);
 	}
 
 	private void tryBindToFlowEngineService() {
@@ -119,6 +173,8 @@ public class DataService extends Service {
 
 	@Override
 	public void onDestroy() {
+		mServiceLooper.quit();
+		
 		try {
 			if (mAPI != null) {
 				mAPI.unregister(mAppID);
@@ -126,6 +182,10 @@ public class DataService extends Service {
 			}
 		} catch (RemoteException e) {
 			e.printStackTrace();
+		}
+		
+		if (dataArchive != null) {
+			dataArchive.close();
 		}
 		
 		stopForeground(true);
@@ -146,6 +206,10 @@ public class DataService extends Service {
 		PendingIntent contentIntent = PendingIntent.getBroadcast(this, 0, new Intent(), 0);
 		notification.setLatestEventInfo(this, text, text, contentIntent);
 		startForeground(R.string.foreground_service_started, notification);
+		
+		if (dataArchive == null) {
+			dataArchive = new DataArchive(this);
+		}
 		
 		Bundle bundle = intent.getExtras();
 
@@ -301,40 +365,6 @@ public class DataService extends Service {
 		}
 	}
 
-	private Handler mHandler = new Handler() {
-		@Override
-		public void handleMessage(Message msg) {
-			switch (msg.what) {
-			case MSG_HANDLE_START_SERVICE_INTENT:
-				handleStartServiceIntent((Bundle)msg.obj);
-				break;
-			case MSG_TRY_BINDING_FLOWENGINE:
-				handleTryBindingFlowEngine();
-				break;
-			case MSG_PUBLISH:
-				Bundle bundle = (Bundle)msg.obj;
-
-				handleLEDNotification(bundle);
-
-				if (isBroadcastData) {
-					Intent i = new Intent(BROADCAST_INTENT_MESSAGE);
-					i.putExtras(bundle);
-					sendBroadcast(i);
-				}
-
-				/*String name = bundle.getString(BUNDLE_NAME);
-				long timestamp = bundle.getLong(BUNDLE_TIMESTAMP);
-				int length = bundle.getInt(BUNDLE_LENGTH);
-				String type = bundle.getString(BUNDLE_TYPE);
-
-				dumpReceivedData(timestamp, type, bundle, name);*/
-
-				break;
-			}
-			super.handleMessage(msg);
-		}
-	};
-
 	private void handleStartServiceIntent(Bundle bundle) {
 		String requestType = bundle.getString(REQUEST_TYPE);
 		try {
@@ -355,6 +385,7 @@ public class DataService extends Service {
 						mAPI.subscribe(mAppID, sensor);
 					} else {
 						mAPI.unsubscribe(mAppID, sensor);
+						dataArchive.finish(sensor);
 					}
 				}
 			}

@@ -1,6 +1,9 @@
 package edu.ucla.nesl.flowengine;
 
 public class SensorType {
+	public static final int ECG_SAMPLE_INTERVAL = 4; //ms
+	public static final int RIP_SAMPLE_INTERVAL = 56; //ms
+	
 	public static final int CHEST_ACCELEROMETER = 1;
 	public static final int ECG = 2;
 	public static final int RIP = 3;
@@ -28,6 +31,19 @@ public class SensorType {
 	public static final String CONVERSATION_CONTEXT_NAME = "Conversation";
 	public static final String MOTION_CONTEXT_NAME = "Motion";
 	public static final String OUTDOOR_CONTEXT_NAME = "Outdoor";
+		
+	public static final int ACTIVITY_STILL = 0;
+	public static final int ACTIVITY_WALK = 1;
+	public static final int ACTIVITY_RUN = 2;
+	public static final int ACTIVITY_BIKE = 3;
+	public static final int ACTIVITY_DRIVE = 2;
+	
+	public static final int NO_STRESS = 0;
+	public static final int STRESS = 1;
+	
+	public static final int QUIET = 0;
+	public static final int SPEAKING = 1;
+	public static final int SMOKING = 2;
 	
 	private SensorType() {}
 

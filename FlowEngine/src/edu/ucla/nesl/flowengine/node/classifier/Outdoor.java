@@ -49,8 +49,8 @@ public class Outdoor extends DataFlowNode {
 		return NO_RESULT;
 	}
 
-	private int determineIndoor(String activity) {
-		if (activity.equals("still")) {
+	private int determineIndoor(int activity) {
+		if (activity == SensorType.ACTIVITY_STILL) {
 			if (mStillStartTime == -1) {
 				mStillStartTime = System.currentTimeMillis();
 			} else if (System.currentTimeMillis() - mStillStartTime > INDOOR_STILL_THRESHOLD) {
@@ -74,12 +74,10 @@ public class Outdoor extends DataFlowNode {
 				output(SensorType.OUTDOOR_CONTEXT_NAME, "boolean", true, 0, timestamp);
 			}
 		} else if (name.contains(SensorType.ACTIVITY_CONTEXT_NAME)) {
-			String activity = (String)data;
-			int result = determineIndoor(activity);
+			int result = determineIndoor((Integer)data);
 			if (result == INDOOR) {
 				output(SensorType.OUTDOOR_CONTEXT_NAME, "boolean", false, 0, timestamp);
 			}
 		}
 	}
-
 }

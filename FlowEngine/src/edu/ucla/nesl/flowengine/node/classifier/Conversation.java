@@ -9,10 +9,6 @@ import edu.ucla.nesl.flowengine.node.DataFlowNode;
 public class Conversation extends DataFlowNode {
 	private static final String TAG = Conversation.class.getSimpleName();
 
-	private final static int QUIET = 0;
-	private final static int SPEAKING = 1;
-	private final static int SMOKING = 2;
-
 	private static final int mRoundingMultiplier = 10000;
 	
 	private long mCurTime = 0;
@@ -48,18 +44,6 @@ public class Conversation extends DataFlowNode {
 		return mFeatureBitVector == 0xFF; 
 	}
 	
-	private String getClassString(int conversation) {
-		switch (conversation) {
-		case QUIET:
-			return "Quiet";
-		case SPEAKING:
-			return "Speaking";
-		case SMOKING:
-			return "Smoking";
-		}
-		return "Unknown";
-	}
-
 	@Override
 	protected void processInput(String name, String type, Object inputData, int length, long timestamp) {
 		if (!type.equals(DataType.DOUBLE)) {
@@ -108,7 +92,7 @@ public class Conversation extends DataFlowNode {
 			mFeatures[4] = mFeatures[4] / mRoundingMultiplier;
 			int conversation = getConversationClassification(mFeatures[0], mFeatures[1], mFeatures[2], mFeatures[3], mFeatures[4], mFeatures[5], mFeatures[6], mFeatures[7]);
 			DebugHelper.log(TAG, "conversation: " + conversation);
-			output(SensorType.CONVERSATION_CONTEXT_NAME, DataType.STRING, getClassString(conversation), 0, timestamp);
+			output(SensorType.CONVERSATION_CONTEXT_NAME, DataType.INTEGER, conversation, 0, timestamp);
 			clearFeatureBitVector();
 			
 			synchronized (DebugHelper.lock){
@@ -127,25 +111,25 @@ public class Conversation extends DataFlowNode {
 	public int getConversationClassification(double percentile_inhal, double std_inhal, double mean_exhal, double mean_ie, double meadian_ie, double mean_bd,double secondBest_bd, double std_strch) {
 		if(mean_exhal <= 126.125)
 		   if(std_inhal <= 44.47134)
-		      if(mean_bd <= 0.222222) return SPEAKING;
-		      else return QUIET;
-		   else return SMOKING;
+		      if(mean_bd <= 0.222222) return SensorType.SPEAKING;
+		      else return SensorType.QUIET;
+		   else return SensorType.SMOKING;
 		else
 		   if(std_strch <= 315.59674)
 		      if(mean_ie <= 0.665843)
 		         if(percentile_inhal <= 50)
-		            if(mean_exhal <= 132.4) return SMOKING;
+		            if(mean_exhal <= 132.4) return SensorType.SMOKING;
 		            else 
-		               if(meadian_ie <= 0.2226) return SMOKING;
-		               else return SPEAKING;
+		               if(meadian_ie <= 0.2226) return SensorType.SMOKING;
+		               else return SensorType.SPEAKING;
 		         else
-		            if(meadian_ie <= 0.4888) return SMOKING;
-		            else return SPEAKING;
-		      else return QUIET;
+		            if(meadian_ie <= 0.4888) return SensorType.SMOKING;
+		            else return SensorType.SPEAKING;
+		      else return SensorType.QUIET;
 		   else 
 		      if(secondBest_bd <= 20)
-		         if(mean_bd <= 1.666667) return SPEAKING;
-		         else return SMOKING;
-		      else return SPEAKING;
+		         if(mean_bd <= 1.666667) return SensorType.SPEAKING;
+		         else return SensorType.SMOKING;
+		      else return SensorType.SPEAKING;
 	}
 }

@@ -2,6 +2,7 @@
 <resources>
 
     <string name="foreground_service_started">Data Collector service running..</string>
+    <string name="foreground_sync_service_started">DataCollector sync service running..</string>
     <string name="app_name">DataCollector</string>
     <string name="app_title">Data Collector</string>
     <string name="action_user_setup">Setup Login</string>

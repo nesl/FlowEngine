@@ -23,6 +23,7 @@ import edu.ucla.nesl.datacollector.Const;
 import edu.ucla.nesl.datacollector.Device;
 import edu.ucla.nesl.datacollector.R;
 import edu.ucla.nesl.datacollector.service.DataService;
+import edu.ucla.nesl.datacollector.service.SyncService;
 import edu.ucla.nesl.datacollector.tools.Tools;
 import edu.ucla.nesl.datacollector.ui.SetupUserDialog;
 import edu.ucla.nesl.datacollector.ui.SetupUserDialog.OnFinishListener;
@@ -73,6 +74,10 @@ public class MainActivity extends Activity {
 			if (isFirst) {
 				Tools.showAlertDialog(this, "Welcome", "Welcome to Data Collector! You've launched Data Collector for the first time, so let's go through inital setup process.", welcomeListener);
 			} else {
+				// Start SyncService
+				intent = new Intent(this, SyncService.class);
+				startService(intent);
+				
 				// Start login activity
 				intent = new Intent(this, LoginActivity.class);
 				startActivityForResult(intent, REQUEST_CODE_NORMAL);			
