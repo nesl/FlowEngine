@@ -2,7 +2,7 @@ BEGIN DECLARE
 PhoneAccelerometer acc
 PhoneGPS gps
 RootMeanSquare rms(9.80665,1.0)
-Buffer buffer(50,-1)
+Buffer buffer(250,-1)
 Scale scale(310.0)
 FFT scaledFFT4_5(4.0,5.0,1.0)
 FFT scaledFFT1_3(1.0,3.0,1.0)

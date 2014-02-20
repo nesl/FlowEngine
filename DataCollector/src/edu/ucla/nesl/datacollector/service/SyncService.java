@@ -261,8 +261,9 @@ public class SyncService extends IntentService {
 			e1.printStackTrace();
 			return false;
 		}
-		File unzipFile = new File(extPath + "/unzipped/" + zipFile.getName().replace(".zip", ""));
+		File unzipFile = new File(extPath + "/unzipped/" + zipFile.getName().replace(DataArchive.READY_FILE_EXT + DataArchive.ZIP_FILE_EXT, ""));
 		if (!unzipFile.exists()) {
+			Log.e(Const.TAG, "Unzipped file: " + unzipFile.getAbsolutePath() + " doesn't exist.");
 			return false;
 		}
 
@@ -371,7 +372,7 @@ public class SyncService extends IntentService {
 			throw new IllegalAccessException("HTTP Server Error: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase() + "(" + content + ")");
 		}
 
-		//Log.i(Const.TAG, "Server Content: " + content);
+		Log.i(Const.TAG, "Server Content: " + content);
 
 		JSONTokener tokener = new JSONTokener(content);
 		JSONArray array = new JSONArray(tokener);

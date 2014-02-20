@@ -218,7 +218,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	};
 
 	private void startAccelerometer() {
-		mSensorManager.registerListener(mThisService, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
+		mSensorManager.registerListener(mThisService, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
 		mIsAccel = true;
 		acquireWakeLock();
 	}

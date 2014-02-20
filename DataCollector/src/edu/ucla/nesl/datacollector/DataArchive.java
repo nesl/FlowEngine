@@ -37,7 +37,7 @@ public class DataArchive {
 	public static final String READY_FILE_EXT = ".ready";
 	public static final String ZIP_FILE_EXT = ".zip";
 
-	private static final long FILE_SIZE_LIMIT = 1024 * 1024 * 1024; // bytes
+	private static final long FILE_SIZE_LIMIT = 1024 * 1024 * 1024 * 5; // bytes
 	private static final long FILE_AGE_LIMIT = 1000 * 60 * 10; // ms
 	//private static final long FILE_AGE_LIMIT = 1000 * 10; // ms
 	
