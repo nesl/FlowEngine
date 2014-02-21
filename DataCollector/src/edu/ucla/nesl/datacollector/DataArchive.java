@@ -225,7 +225,8 @@ public class DataArchive {
 		String type = bundle.getString(DataService.BUNDLE_TYPE);
 
 		mStringBuilder.setLength(0);
-		if (name.equals(SensorType.PHONE_ACCELEROMETER_NAME)) {
+		if (name.equals(SensorType.PHONE_ACCELEROMETER_NAME)
+				|| name.equals(SensorType.PHONE_GPS_NAME)) {
 			double[] data = bundle.getDoubleArray(DataService.BUNDLE_DATA);
 			mStringBuilder.append(timeStr);
 			for (double v : data) {

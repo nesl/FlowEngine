@@ -69,7 +69,7 @@ import edu.ucla.nesl.datacollector.tools.ZipUtils;
 
 public class SyncService extends IntentService {
 
-	private static final String PORT = "9443";
+	private static final String PORT = "8443";
 	private static int SERVICE_RESTART_INTERVAL = 5 * 60; // seconds
 	//private static int SERVICE_RESTART_INTERVAL = 5; // seconds
 
@@ -237,8 +237,15 @@ public class SyncService extends IntentService {
 				if (!createStream(name, file)) {
 					continue;
 				}
-			} 
-			uploadFile(name, file);
+			}
+			
+			try {
+				uploadFile(name, file);
+			} catch (IllegalAccessException e) {
+				if (!e.toString().contains("Too many duplicates")) {
+					throw e;
+				}
+			}
 			
 			file.delete();
 		}

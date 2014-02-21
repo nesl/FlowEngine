@@ -6,6 +6,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -105,6 +109,10 @@ public class ZephyrDeviceService extends Service {
 	private long lastECGRecvTime = -1;
 	private long lastRIPRecvTime = -1;
 
+	int[] breathingData = new int[18];
+	int[] ecgData = new int[63];
+	int[] accData = new int[60];
+	
 	@Override
 	public void onCreate() {
 		mNotification = new NotificationHelper(this, TAG, this.getClass().getName(), R.drawable.ic_launcher);
@@ -190,6 +198,9 @@ public class ZephyrDeviceService extends Service {
 		}
 
 		sendStopAllSensorsPacket();
+		
+		sendSetRTCPacket();
+		//sendGetRTCPacket();
 
 		if (mIsAccelerometer) {
 			sendStartAccPacket();
@@ -281,7 +292,7 @@ public class ZephyrDeviceService extends Service {
 					if (msgID == 0x20) {
 						//sample interval: 1s
 						//Log.d(TAG, "Received General Data Packet");
-						long timestamp = System.currentTimeMillis();
+						long timestamp = parseTimestamp(receivedBytes);
 						//int heartRate = (receivedBytes[12]&0xFF) | ((receivedBytes[13]&0xFF)<<8);
 						//int respirationRate = (receivedBytes[14]&0xFF) | ((receivedBytes[15]&0xFF)<<8);
 						int skinTemp = (receivedBytes[16]&0xFF) | ((receivedBytes[17]&0xFF)<<8);
@@ -304,8 +315,7 @@ public class ZephyrDeviceService extends Service {
 						}
 					} else if (msgID == 0x21) {
 						//Log.d(TAG, "Received Breathing Waveform Packet");
-						int[] breathingData = new int[18];
-						long timestamp = System.currentTimeMillis();
+						long timestamp = parseTimestamp(receivedBytes);
 						lastRIPRecvTime = timestamp;
 						for (int i=12, j=0; i<35; i+=5)	{
 							breathingData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
@@ -331,9 +341,8 @@ public class ZephyrDeviceService extends Service {
 
 					} else if (msgID == 0x22) {
 						//Log.d(TAG, "Received ECG Waveform Packet");
-						long timestamp = System.currentTimeMillis();
+						long timestamp = parseTimestamp(receivedBytes);
 						lastECGRecvTime = timestamp;
-						int[] ecgData = new int[63];
 						for (int i=12, j=0; i<91; i+=5) {
 							ecgData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
 							if (i+2 < 91)
@@ -355,8 +364,7 @@ public class ZephyrDeviceService extends Service {
 						}
 					} else if (msgID == 0x25) {
 						//Log.d(TAG, "Received Accelerometer Packet");
-						int[] accData = new int[60];
-						long timestamp = System.currentTimeMillis();
+						long timestamp = parseTimestamp(receivedBytes);
 						for (int i=12, j=0; i<87; i+=5) {
 							accData[j++] = (receivedBytes[i]&0xFF) | (((receivedBytes[i+1]&0xFF) & 0x03) << 8);
 							if (i+2 < 87)
@@ -435,8 +443,21 @@ public class ZephyrDeviceService extends Service {
 			mNotification.showNotificationNow("Receiving stopped.");
 			releaseWakeLock();
 		}
-
 	};
+
+	private long parseTimestamp(byte[] receivedBytes) {
+		
+		int year = (receivedBytes[4] & 0xFF) | ((receivedBytes[5] & 0xFF) << 8);
+		int month = receivedBytes[6];
+		int day = receivedBytes[7];
+		long millisDay = 0;
+		for (int i=8, j=0; i<12; i++, j+=8) {
+			millisDay |= (receivedBytes[i] & 0xFF) << j;
+		}
+		long timestamp = new Date(year - 1900, month - 1, day).getTime() + millisDay;
+		
+		return timestamp;
+	}
 
 	private void handleChestbandStatus(boolean isGood) {
 		//Log.d(TAG, "isGood: " + isGood);
@@ -954,6 +975,58 @@ public class ZephyrDeviceService extends Service {
 	private void releaseWakeLock() {
 		if (mWakeLock.isHeld()) {
 			mWakeLock.release();
+		}
+	}
+	
+	private void sendSetRTCPacket() {
+		if (mOutputStream != null) {
+			byte[] msg = new byte[] { 0x02, 0x07, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03 };
+
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US);
+			String curDateTime = sdf.format(new Date(Calendar.getInstance().getTimeInMillis()));
+			
+			Log.d(TAG, "curDateTime: " + curDateTime);
+			
+			String split[] = curDateTime.split("-");
+			int year = Integer.parseInt(split[0]);
+			int month = Integer.parseInt(split[1]);
+			int day = Integer.parseInt(split[2]);
+			int hour= Integer.parseInt(split[3]);
+			int minute = Integer.parseInt(split[4]);
+			int sec = Integer.parseInt(split[5]);
+
+			msg[3] = (byte)day;
+			msg[4] = (byte)month;
+			msg[5] = (byte)(year & 0xFF);
+			msg[6] = (byte)((year>>8) & 0xFF);
+			msg[7] = (byte)hour;
+			msg[8] = (byte)minute;
+			msg[9] = (byte)sec;
+			
+			putCRC(msg);
+			
+			Log.d(TAG, "here sent: " + getHex(msg, msg.length));
+			
+			try {
+				mOutputStream.write(msg);
+			} 
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	void sendGetRTCPacket() {
+		byte[] msg = new byte[] { 0x02, 0x08, 0x00, 0x00, 0x03 };
+		putCRC(msg);
+		
+		try {
+			mOutputStream.write(msg);
+		} 
+		catch (IOException e)
+		{
+			e.printStackTrace();
 		}
 	}
 }

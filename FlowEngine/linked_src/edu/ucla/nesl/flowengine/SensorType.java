@@ -36,7 +36,7 @@ public class SensorType {
 	public static final int ACTIVITY_WALK = 1;
 	public static final int ACTIVITY_RUN = 2;
 	public static final int ACTIVITY_BIKE = 3;
-	public static final int ACTIVITY_DRIVE = 2;
+	public static final int ACTIVITY_DRIVE = 4;
 	
 	public static final int NO_STRESS = 0;
 	public static final int STRESS = 1;
