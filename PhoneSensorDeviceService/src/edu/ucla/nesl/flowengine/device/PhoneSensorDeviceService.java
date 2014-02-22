@@ -34,11 +34,12 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	private static final String TAG = PhoneSensorDeviceService.class.getSimpleName();
 
 	private static final int RETRY_INTERVAL = 5000; // ms
-
+	private static final double LOCATION_ACCURACY_FILTER = 500.0;
+	
 	private static final String FLOW_ENGINE_SERVICE_NAME = "edu.ucla.nesl.flowengine.FlowEngine";
 
 	private static final int GPS_INTERVAL = 1000; // ms
-	private static final int GPS_LOCATION_INTERVAL = 1; // meters
+	private static final int GPS_LOCATION_INTERVAL = 10; // meters
 
 	private static final int MSG_KILL = 0;
 	private static final int MSG_START = 1;
@@ -377,6 +378,11 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 		data[1] = location.getLongitude();
 		data[2] = location.getAltitude();
 		data[3] = location.getSpeed();
+		
+		if (location.getAccuracy() > LOCATION_ACCURACY_FILTER) {
+			return;
+		}
+		
 		try {
 			mAPI.pushDoubleArray(mDeviceID, SensorType.PHONE_GPS, data, data.length, timestamp);
 		} catch (RemoteException e) {
