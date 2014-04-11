@@ -11,19 +11,24 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.KeyStore;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpVersion;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
@@ -33,7 +38,9 @@ import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.HttpProtocolParams;
 import org.apache.http.protocol.HTTP;
@@ -62,6 +69,8 @@ import android.widget.Toast;
 import edu.ucla.nesl.datacollector.Const;
 import edu.ucla.nesl.datacollector.DataArchive;
 import edu.ucla.nesl.datacollector.R;
+import edu.ucla.nesl.datacollector.Range;
+import edu.ucla.nesl.datacollector.db.DataSource;
 import edu.ucla.nesl.datacollector.tools.Base64;
 import edu.ucla.nesl.datacollector.tools.MySSLSocketFactory;
 import edu.ucla.nesl.datacollector.tools.NetworkUtils;
@@ -70,9 +79,14 @@ import edu.ucla.nesl.datacollector.tools.ZipUtils;
 public class SyncService extends IntentService {
 
 	private static final String PORT = "8443";
-	private static int SERVICE_RESTART_INTERVAL = 5 * 60; // seconds
-	//private static int SERVICE_RESTART_INTERVAL = 5; // seconds
-
+	private static int LONG_SERVICE_RESTART_INTERVAL = 5 * 60; // seconds
+	private static int SHORT_SERVICE_RESTART_INTERVAL = 10; // seconds
+	
+	private static int HTTP_TIMEOUT = 5 * 60 * 1000; // milli seconds  
+			
+	private static int INTERVAL_REQUEST_REPORT_AFTER_UPLOAD = LONG_SERVICE_RESTART_INTERVAL;
+	//private static int INTERVAL_REQUEST_REPORT_AFTER_UPLOAD = SHORT_SERVICE_RESTART_INTERVAL;
+	
 	private String extPath = Environment.getExternalStorageDirectory().getPath() + "/" + DataArchive.archiveDir;
 
 	private Handler handler = new Handler();
@@ -91,6 +105,8 @@ public class SyncService extends IntentService {
 	private String serverip;
 	private String username;
 	private String password;
+	
+	private long lastSyncTime = 0;
 
 	@Override
 	public void onCreate() {
@@ -131,11 +147,11 @@ public class SyncService extends IntentService {
 				startForeground(R.string.foreground_sync_service_started, notification);
 
 				acquireWakeLock();
-
+				
 				try {
-					startSync();
 					cancelNotification();
 					cancelServiceSchedule();
+					startSync();
 				} catch (ClientProtocolException e) {
 					e.printStackTrace();
 					createNotification("Server Authentication Problem.");
@@ -144,7 +160,7 @@ public class SyncService extends IntentService {
 					createNotification("Server Connection Problem.");
 					// Schedule next check.
 					if ( isWiFiConnected() && isBatteryCharging() && !isServiceScheduled()) {
-						scheduleStartService();
+						scheduleStartService(LONG_SERVICE_RESTART_INTERVAL);
 					}
 				} catch (JSONException e) {
 					e.printStackTrace();
@@ -154,7 +170,7 @@ public class SyncService extends IntentService {
 					createNotification("Server Response Problem: " + e);
 					// Schedule next check.
 					if ( isWiFiConnected() && isBatteryCharging() && !isServiceScheduled()) {
-						scheduleStartService();
+						scheduleStartService(SHORT_SERVICE_RESTART_INTERVAL);
 					}
 				}
 
@@ -176,14 +192,14 @@ public class SyncService extends IntentService {
 		return PendingIntent.getBroadcast(this, 0, new Intent(this, SyncService.class), PendingIntent.FLAG_NO_CREATE) != null;
 	}
 
-	private void scheduleStartService() {
+	private void scheduleStartService(long interval) {
 		Calendar cal = Calendar.getInstance();
 
 		Intent intent = new Intent(this, SyncService.class);
 		PendingIntent pintent = PendingIntent.getService(this, 0, intent, 0);
 
 		AlarmManager alarm = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-		alarm.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis() + SERVICE_RESTART_INTERVAL*1000, pintent);
+		alarm.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis() + (interval * 1000), pintent);
 	}
 
 	private void cancelServiceSchedule() {
@@ -225,30 +241,127 @@ public class SyncService extends IntentService {
 	}
 
 	private void startSync() throws ClientProtocolException, IOException, JSONException, IllegalAccessException {
-		updateStreamNameSet();
-
 		File dir = new File(extPath);
 		File[] files = dir.listFiles(new ReadyCsvZipFileFilter());
 		Arrays.sort(files);
-		for (File file : files) {
-			Log.d(Const.TAG, "cur file: " + file.getName());
-			String name = file.getName().split("_")[0];
-			if (!streamName.contains(name)) {
-				if (!createStream(name, file)) {
-					continue;
+
+		if (files.length <= 0) {
+			long curTime = System.currentTimeMillis();
+			if (curTime - lastSyncTime > INTERVAL_REQUEST_REPORT_AFTER_UPLOAD * 1000) {
+				// request report generation
+				Log.d(Const.TAG, "checkRequestReportGeneration()");
+				checkRequestReportGeneration();
+			} else {
+				if ( isWiFiConnected() && isBatteryCharging() && !isServiceScheduled()) {
+					scheduleStartService(INTERVAL_REQUEST_REPORT_AFTER_UPLOAD);
+					Log.d(Const.TAG, "service scheduled.");
 				}
 			}
-			
-			try {
-				uploadFile(name, file);
-			} catch (IllegalAccessException e) {
-				if (!e.toString().contains("Too many duplicates")) {
-					throw e;
+		} else {
+			updateStreamNameSet();
+			for (File file : files) {
+				Log.d(Const.TAG, "cur file: " + file.getName());
+				String name = file.getName().split("_")[0];
+				if (!streamName.contains(name)) {
+					if (!createStream(name, file)) {
+						continue;
+					}
+				}
+
+				try {
+					uploadFile(name, file);
+				} catch (IllegalAccessException e) {
+					if (e.toString().contains("Too many duplicates") 
+						|| e.toString().contains("Problem with Zip file")
+						|| e.toString().contains("Empty data")
+						|| e.toString().contains("not a valid date and time")
+						|| e.toString().contains("Unsupported date time format")
+						|| e.toString().contains("Malformed input line")
+						|| e.toString().contains("Unable to parse timestamp")
+						|| e.toString().contains("Too many data values")
+						) { 
+						Log.w(Const.TAG, "Bypassing Server Response Error. (Possibly corrupted data): " + e.toString());
+						e.printStackTrace();
+					} else {
+						throw e;
+					}
+				}
+
+				file.delete();
+				
+				if ( !isWiFiConnected() || !isBatteryCharging() ) {
+					break;
 				}
 			}
+
+			lastSyncTime = System.currentTimeMillis();
 			
-			file.delete();
+			if ( isWiFiConnected() && isBatteryCharging() && !isServiceScheduled()) {
+				scheduleStartService(INTERVAL_REQUEST_REPORT_AFTER_UPLOAD);
+				Log.d(Const.TAG, "service scheduled.");
+			}
+			Log.d(Const.TAG, "end of start sync()");
 		}
+	}
+
+	private void checkRequestReportGeneration() throws ClientProtocolException, IOException, IllegalAccessException {
+		DataSource dataSource = null; 
+
+		try {
+			dataSource = new DataSource(this);
+			dataSource.open();
+
+			List<Range> ranges = dataSource.getNoReportDataCollections();
+
+			Log.d(Const.TAG, "ranges: " + ranges);
+			
+			if (ranges == null || ranges.size() == 0) {
+				return;
+			}
+
+			for (Range range : ranges) {
+				requestReportGeneration(range.startTimeInSecs, range.endTimeInSecs);
+				dataSource.markReportDone(range.startTimeInSecs, range.endTimeInSecs);
+			}
+
+		} finally {
+			if (dataSource != null)
+				dataSource.close();
+		}
+
+	}
+
+	private void requestReportGeneration(long startTimeInSecs, long endTimeInSecs) throws ClientProtocolException, IOException, IllegalAccessException {
+		String url = "https://" + serverip + ":" + PORT + "/api/report/create";
+
+		Date startDate = new Date(startTimeInSecs * 1000);
+		Date endDate = new Date(endTimeInSecs * 1000);
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+		List<NameValuePair> params = new LinkedList<NameValuePair>();
+		params.add(new BasicNameValuePair("start_time", sdf.format(startDate)));
+		params.add(new BasicNameValuePair("end_time", sdf.format(endDate)));
+		String paramString = URLEncodedUtils.format(params, "utf-8");
+		url += "?" + paramString;
+
+		HttpClient httpClient = getNewHttpClient();
+		HttpGet httpGet = new HttpGet(url);
+
+		// Add authorization
+		httpGet.setHeader("Authorization", "basic " + Base64.encodeToString((username + ":" + password).getBytes(), Base64.NO_WRAP));
+
+		HttpResponse response = httpClient.execute(httpGet);
+		InputStream is = response.getEntity().getContent();
+		long length = response.getEntity().getContentLength();
+		byte[] buffer = new byte[(int)length];
+		is.read(buffer);
+		String content = new String(buffer);
+
+		if (response.getStatusLine().getStatusCode() != 200) {
+			throw new IllegalAccessException("HTTP Server Error: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase() + "(" + content + ")");
+		}
+
+		Log.i(Const.TAG, "Server Content: " + content);
 	}
 
 	private void uploadFile(String name, File file) throws ClientProtocolException, IllegalAccessException, IOException {
@@ -429,7 +542,9 @@ public class SyncService extends IntentService {
 			HttpParams params = new BasicHttpParams();
 			HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
 			HttpProtocolParams.setContentCharset(params, HTTP.UTF_8);
-
+			HttpConnectionParams.setConnectionTimeout(params, HTTP_TIMEOUT);
+			HttpConnectionParams.setSoTimeout(params, HTTP_TIMEOUT);
+			
 			SchemeRegistry registry = new SchemeRegistry();
 			registry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
 			registry.register(new Scheme("https", sf, 443));
@@ -465,14 +580,10 @@ public class SyncService extends IntentService {
 		byte[] buffer = new byte[(int)length];
 		is.read(buffer);
 		String content = new String(buffer);
-		
+
 		if (response.getStatusLine().getStatusCode() != 200) {
 			String msg = "HTTP Server Error: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase() + "(" + content + ")";
-			if (response.getStatusLine().getStatusCode() == 400 && content.contains("Empty data.")) {
-				Log.e(Const.TAG, msg);
-			} else {
-				throw new IllegalAccessException(msg);
-			}
+			throw new IllegalAccessException(msg);
 		}
 
 		Log.i(Const.TAG, "Server Content: " + content);

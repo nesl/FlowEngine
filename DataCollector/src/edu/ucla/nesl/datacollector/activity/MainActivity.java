@@ -55,6 +55,10 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 
 		startService(new Intent(this, DataService.class));
+		
+		for (String serviceName : TabDevicesActivity.deviceServiceNames) {
+			startService(new Intent(serviceName));
+		}
 
 		Intent intent = getIntent();
 		Bundle bundle = intent.getExtras();
@@ -79,8 +83,12 @@ public class MainActivity extends Activity {
 				startService(intent);
 				
 				// Start login activity
-				intent = new Intent(this, LoginActivity.class);
-				startActivityForResult(intent, REQUEST_CODE_NORMAL);			
+				//intent = new Intent(this, LoginActivity.class);
+				//startActivityForResult(intent, REQUEST_CODE_NORMAL);
+				
+				// Start collection control activity
+				intent = new Intent(this, CollectionControlActivity.class);
+				startActivityForResult(intent, REQUEST_CODE_NORMAL);
 			}
 		}
 	}
@@ -168,7 +176,7 @@ public class MainActivity extends Activity {
 		if (setupMode == Const.SETUP_BLUETOOTH) {
 			finish();
 		} else {
-			Tools.showAlertDialog(context, "Congratulations!", "Now you're ready to use Data Collector. Please login in the following screen."
+			Tools.showAlertDialog(context, "Congratulations!", "Now you're ready to use Data Collector."
 					, new OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
@@ -179,8 +187,13 @@ public class MainActivity extends Activity {
 					editor.putBoolean(Const.PREFS_IS_FIRST, false);
 					editor.commit();
 
-					Intent intent = new Intent(context, LoginActivity.class);
+					//Intent intent = new Intent(context, LoginActivity.class);
+					//startActivityForResult(intent, REQUEST_CODE_NORMAL);
+
+					// Start collection control activity
+					Intent intent = new Intent(context, CollectionControlActivity.class);
 					startActivityForResult(intent, REQUEST_CODE_NORMAL);
+
 				}
 			});
 		}

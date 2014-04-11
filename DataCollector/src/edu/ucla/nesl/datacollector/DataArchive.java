@@ -380,6 +380,9 @@ public class DataArchive {
 		if (timestamp - epoch > FILE_AGE_LIMIT) {
 			return true; 
 		}
+		/*if (timestamp - epoch < 0) { // invalid future time, start new file.
+			return true;
+		}*/
 		return false;
 	}
 

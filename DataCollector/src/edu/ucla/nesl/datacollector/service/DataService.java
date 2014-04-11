@@ -211,7 +211,10 @@ public class DataService extends Service {
 			dataArchive = new DataArchive(this);
 		}
 		
-		Bundle bundle = intent.getExtras();
+		Bundle bundle = null;
+		if (intent != null) {
+			bundle = intent.getExtras();
+		}
 
 		if (bundle == null && mAPI == null) {
 			mHandler.sendMessage(mHandler.obtainMessage(MSG_TRY_BINDING_FLOWENGINE));

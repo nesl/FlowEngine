@@ -26,10 +26,10 @@ import edu.ucla.nesl.datacollector.R;
 
 public class TabDevicesActivity extends Activity {
 
-	private static final String[] deviceServiceNames = new String[] {
+	public static final String[] deviceServiceNames = new String[] {
 		"edu.ucla.nesl.flowengine.device.PhoneSensorDeviceService",
 		"edu.ucla.nesl.flowengine.device.ZephyrDeviceService",
-		"edu.ucla.nesl.flowengine.device.MetawatchDeviceService"
+		//"edu.ucla.nesl.flowengine.device.MetawatchDeviceService"
 	};
 	private static final int MSG_UPDATE_UI = 0xAB;
 

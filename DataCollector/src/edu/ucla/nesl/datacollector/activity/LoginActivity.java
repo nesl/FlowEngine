@@ -47,7 +47,7 @@ public class LoginActivity extends Activity {
 
 	private void loginSuccessful() {
 		// Start activity
-		Intent i = new Intent(this, MainTabActivity.class);
+		Intent i = new Intent(this, CollectionControlActivity.class);
 		startActivity(i);
 	}
 	

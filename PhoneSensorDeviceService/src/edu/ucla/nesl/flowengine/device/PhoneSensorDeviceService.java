@@ -33,6 +33,9 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 
 	private static final String TAG = PhoneSensorDeviceService.class.getSimpleName();
 
+	//private static final int ACCELEROMETER_DELAY = SensorManager.SENSOR_DELAY_UI;
+	private static final int ACCELEROMETER_DELAY = SensorManager.SENSOR_DELAY_GAME;
+	
 	private static final int RETRY_INTERVAL = 5000; // ms
 	private static final double LOCATION_ACCURACY_FILTER = 500.0;
 	
@@ -219,7 +222,7 @@ public class PhoneSensorDeviceService extends Service implements SensorEventList
 	};
 
 	private void startAccelerometer() {
-		mSensorManager.registerListener(mThisService, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+		mSensorManager.registerListener(mThisService, mAccelerometer, ACCELEROMETER_DELAY);
 		mIsAccel = true;
 		acquireWakeLock();
 	}

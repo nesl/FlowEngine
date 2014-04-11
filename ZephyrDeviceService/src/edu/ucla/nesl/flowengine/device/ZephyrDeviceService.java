@@ -273,7 +273,7 @@ public class ZephyrDeviceService extends Service {
 			byte[] receivedBytes = new byte[128];
 
 			while (!mIsStopRequest) {
-				try {
+				try {					
 					// Receiving STX
 					do {
 						mInputStream.read(receivedBytes, 0, 1);
@@ -283,10 +283,21 @@ public class ZephyrDeviceService extends Service {
 					mInputStream.read(receivedBytes, 1, 2);
 					int msgID = receivedBytes[1] & 0xFF;
 
-					// Receiving payload, CRC, and ACK
-					mInputStream.read(receivedBytes, 3, receivedBytes[2]+2);
+					try {
+						// Receiving payload, CRC, and ACK
+						mInputStream.read(receivedBytes, 3, receivedBytes[2]+2);
+					} catch (ArrayIndexOutOfBoundsException e) {
+						e.printStackTrace();
+						continue;
+					}
+					
+					int year = (receivedBytes[4] & 0xFF) | ((receivedBytes[5] & 0xFF) << 8);
+					int month = receivedBytes[6];
+					int day = receivedBytes[7];
 
-					//int numBytes = receivedBytes[2]+5;
+					// TODO: add CRC check?
+					
+          //int numBytes = receivedBytes[2]+5;
 					//Log.d(TAG, "Received " + Integer.toString(numBytes) + " bytes: " + getHex(receivedBytes, receivedBytes[2]+5));
 
 					if (msgID == 0x20) {
@@ -299,7 +310,7 @@ public class ZephyrDeviceService extends Service {
 						int battery = receivedBytes[54] & 0x7F;
 						int buttonWorn = receivedBytes[55] & 0xF0; 
 
-						//boolean isWorn = (buttonWorn & 0x80) > 0;
+						boolean isWorn = (buttonWorn & 0x80) > 0;
 						//boolean isHRSignalLow =(buttonWorn & 0x20) > 0; 
 						//handleChestbandStatus(isWorn);
 						handleChestbandStatus(true);

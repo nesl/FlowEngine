@@ -35,9 +35,9 @@ public class TabSensorsActivity extends Activity {
 		SensorType.ACTIVITY_CONTEXT_NAME,
 		SensorType.STRESS_CONTEXT_NAME,
 		SensorType.CONVERSATION_CONTEXT_NAME,
-		SensorType.PHONE_BATTERY_NAME,
+		//SensorType.PHONE_BATTERY_NAME,
 		SensorType.ZEPHYR_BATTERY_NAME,
-		SensorType.ZEPHYR_BUTTON_WORN_NAME
+		//SensorType.ZEPHYR_BUTTON_WORN_NAME
 	};
 	
 	private Context context = this;
