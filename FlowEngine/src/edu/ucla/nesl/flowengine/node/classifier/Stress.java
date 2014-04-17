@@ -19,6 +19,7 @@ public class Stress extends DataFlowNode {
 	private static final int NUM_FEATURES = 13;
 	private double[] mFeatures = new double[NUM_FEATURES];
 	private int mFeatureBitVector = 0;
+	private int normNo = 0;
 	
 	private static final int INDEX_VENTILATION = 0;
 	private static final int INDEX_MEAN_INHALATION = 1;
@@ -189,7 +190,6 @@ public class Stress extends DataFlowNode {
 
 	public boolean getStressPredictionSVM(double features[])
 	{
-		int normNo = 0;
 		double meanFeature[] = new double[13];
 		double stdFeature[] = new double[13];
 		double v=0;
