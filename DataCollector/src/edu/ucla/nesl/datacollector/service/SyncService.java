@@ -63,7 +63,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 import edu.ucla.nesl.datacollector.Const;
@@ -216,7 +215,7 @@ public class SyncService extends IntentService {
 				new Intent(),
 				PendingIntent.FLAG_UPDATE_CURRENT);
 
-		Notification noti = new NotificationCompat.Builder(this)
+		Notification noti = new Notification.Builder(this)
 		.setContentTitle("DataCollector Error")
 		.setContentText(message)
 		.setContentIntent(pintent)
